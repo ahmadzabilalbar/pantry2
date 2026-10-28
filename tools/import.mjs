@@ -91,7 +91,7 @@ async function rowsFor(table) {
   return rows;
 }
 
-const tabs = Object.keys(TABLES).filter(t => t !== "login_attempts");
+const tabs = Object.keys(TABLES);
 const current = await getValues(tabs.map(t => a1(t, "A2:A")));
 const busy = tabs.filter((t, i) => current[i].length > 0 && (dump[t] || []).length > 0);
 if (busy.length && !force) {

@@ -1,9 +1,11 @@
 /**
  * Local preview on fake data - no Google project, Vercel account or Blob store
  * needed. Mimics vercel.json's routing: public/ as static files, "/" and
- * "/laporan" to api/page.js, "/api.php" to api/pantry.js.
+ * "/laporan" to api/page.js, "/api.php" to api/pantry.js, "/auth/google*" to
+ * api/auth.js. Google's consent page is skipped: "Log Masuk dengan Google"
+ * comes straight back signed in as the fake admin.
  *
- *   npm run preview        -> http://localhost:3000  (login: zabil / demo1234)
+ *   npm run preview        -> http://localhost:3000
  *
  * Data lives in memory and is lost when the server stops. For the real thing
  * against your sheet, use `vercel dev` with .env.local.
@@ -18,7 +20,7 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const PUBLIC = path.join(ROOT, "public");
 const PORT = Number(process.env.PORT || 3000);
 
-await installFakeEnv({ zabil: { password: "demo1234", full_name: "Pentadbir Demo" } });
+installFakeEnv();
 const { sheets } = installFakeSheets();
 sheets.events.rows.push([1, "Pantry Aras 2", "Kutipan demo", "active", 0, 0, "2026-10-01 08:00:00", ""]);
 sheets.settings.rows.push(["title", "Pantry Aras 2"], ["currency", "RM"]);
@@ -35,6 +37,19 @@ sheets.expenses.rows.push([1, "Sabun & Tisu", 18.9, "2026-10-04", "Lain-lain", "
 
 const page = (await import("../api/page.js")).default;
 const api = (await import("../api/pantry.js")).default;
+const auth = (await import("../api/auth.js")).default;
+
+/** Stand in for Google's consent page: go straight back with a demo code. */
+function skipGoogleConsent(res) {
+  const setHeader = res.setHeader.bind(res);
+  res.setHeader = (name, value) => {
+    if (name.toLowerCase() === "location" && String(value).startsWith("https://accounts.google.com/")) {
+      const q = new URL(value).searchParams;
+      value = `${q.get("redirect_uri")}?code=demo&state=${encodeURIComponent(q.get("state"))}`;
+    }
+    return setHeader(name, value);
+  };
+}
 
 const MIME = {
   ".js": "text/javascript", ".css": "text/css", ".html": "text/html",
@@ -49,6 +64,12 @@ http.createServer(async (req, res) => {
     if (url.pathname === "/" || url.pathname === "/index.php") return await page(req, res);
     if (url.pathname === "/laporan") { req.query.view = "laporan"; return await page(req, res); }
     if (url.pathname === "/api.php") return await api(req, res);
+    if (url.pathname === "/auth/google") {
+      req.query.step = "start";
+      skipGoogleConsent(res);
+      return await auth(req, res);
+    }
+    if (url.pathname === "/auth/google/callback") { req.query.step = "callback"; return await auth(req, res); }
 
     const file = path.join(PUBLIC, path.normalize(url.pathname));
     if (!file.startsWith(PUBLIC + path.sep) || !fs.existsSync(file) || !fs.statSync(file).isFile()) {
@@ -63,5 +84,5 @@ http.createServer(async (req, res) => {
     res.end("Preview error");
   }
 }).listen(PORT, () => {
-  console.log(`Preview: http://localhost:${PORT}  (log masuk: zabil / demo1234, data palsu dalam memori)`);
+  console.log(`Preview: http://localhost:${PORT}  (log masuk Google palsu sebagai pentadbir, data palsu dalam memori)`);
 });

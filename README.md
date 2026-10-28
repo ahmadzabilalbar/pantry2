@@ -43,6 +43,30 @@ access to the one sheet you share with it.
 > If your Google Workspace (e.g. `uum.edu.my`) blocks service-account key
 > creation, use a personal Gmail account for the Cloud project and the sheet.
 
+### 1b. Google Cloud: sign-in client
+
+Admins log in with **Sign in with Google**. There are no passwords. Only the
+emails in `ADMIN_EMAILS` in `lib/auth.js` (`ahmadzabilalbar@gmail.com`)
+are let in. Every other Google account is turned away.
+
+In the same Cloud project:
+
+1. **APIs & Services → OAuth consent screen** (Google Auth Platform) →
+   **Get started**.
+   - App name: `Pantry Aras 2`; support email: your Gmail.
+   - Audience: **External**; contact email: your Gmail → **Create**.
+2. **Audience → Test users → Add users** → `ahmadzabilalbar@gmail.com`.
+   - Testing mode is fine: only the listed test users can sign in.
+   - The app asks only for `openid email profile`, so no Google review is
+     needed if you ever publish it.
+3. **Clients → Create client → Web application**, name `pantry2-web`.
+   **Authorized redirect URIs**:
+   - `https://pantry-aras2.vercel.app/auth/google/callback`
+   - `http://localhost:3000/auth/google/callback` (for `npm run dev`)
+
+   Add another `https://<domain>/auth/google/callback` for any custom domain.
+4. **Create**, then copy the **Client ID** and **Client secret**.
+
 ### 2. Google Sheet
 
 1. Create a blank sheet at <https://sheets.new>. Name it, e.g., `Pantry Data`.
@@ -67,25 +91,10 @@ Fill in `.env.local`:
 |---|---|
 | `GOOGLE_SHEET_ID` | the id from step 2.3 |
 | `GOOGLE_SERVICE_ACCOUNT_JSON` | the whole content of the downloaded JSON key, on one line |
+| `GOOGLE_OAUTH_CLIENT_ID` | the Client ID from step 1b.4 |
+| `GOOGLE_OAUTH_CLIENT_SECRET` | the Client secret from step 1b.4 |
 | `SESSION_SECRET` | output of `node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"` |
-| `PANTRY_USERS` | see below |
 | `BLOB_READ_WRITE_TOKEN` | fill in after step 5 (only needed locally for the image import) |
-
-**`PANTRY_USERS`**. To keep the existing logins and passwords:
-
-```bash
-npm run hash-password -- --from-file ../pantry/credentials/local_users.json
-```
-
-Or create an account from scratch (you'll be asked for the password):
-
-```bash
-npm run hash-password -- zabil "Ahmad Zabil Albar"
-```
-
-Paste the printed JSON as the value. Only `zabil` and `5973` are admins
-(`ADMIN_USERNAMES` in `lib/auth.js`). Other accounts can log in but can't change
-anything.
 
 Then create the tabs in the sheet:
 
@@ -94,14 +103,14 @@ npm run sheet:init
 ```
 
 The sheet should now have the tabs `settings`, `announcement`, `showcase`,
-`items`, `contributions`, `contributions_backup`, `events`, `expenses`,
-`staff` and `login_attempts`, each with a header row.
+`items`, `contributions`, `contributions_backup`, `events`, `expenses` and
+`staff`, each with a header row.
 
 ### 4. GitHub
 
 The repository can be <https://github.com/ahmadzabilalbar/pantry2>. **Make it
 private.** It holds no secrets, but there's no reason to publish the admin
-usernames or the code.
+email or the code.
 
 ```bash
 cd C:/xampp/htdocs/pantry2
@@ -126,8 +135,9 @@ git push -u origin main
    - Build and Output Settings: leave the defaults. `vercel.json` sets
      `outputDirectory: public`.
 4. **Environment Variables**: add `GOOGLE_SHEET_ID`,
-   `GOOGLE_SERVICE_ACCOUNT_JSON`, `SESSION_SECRET` and `PANTRY_USERS` with the
-   same values as `.env.local`.
+   `GOOGLE_SERVICE_ACCOUNT_JSON`, `GOOGLE_OAUTH_CLIENT_ID`,
+   `GOOGLE_OAUTH_CLIENT_SECRET` and `SESSION_SECRET` with the same values as
+   `.env.local`.
 5. **Deploy**.
 6. After the first deploy: **Storage → Create → Blob** → name it
    `pantry2-images` → **Connect** to the project (all environments). This adds
@@ -135,7 +145,8 @@ git push -u origin main
 7. **Deployments → ⋯ → Redeploy** so the new variable takes effect.
 8. Optional: **Settings → Domains** to add your own domain.
 
-Open the `*.vercel.app` URL and log in with the lock icon.
+Open the `*.vercel.app` URL, click the lock icon, then **Log Masuk dengan
+Google**.
 
 From now on, `git push` to `main` deploys to production automatically, and
 pushes to other branches get their own preview URL.
@@ -166,10 +177,10 @@ contains every staff name and the full ledger.
 
 | Task | How |
 |---|---|
-| Try the UI locally without Google | `npm run preview` → <http://localhost:3000> (login `zabil` / `demo1234`, fake in-memory data) |
+| Try the UI locally without Google | `npm run preview` → <http://localhost:3000> (Google sign-in is faked and logs you straight in as admin; data is fake and in memory) |
 | Run against the real sheet locally | `npx vercel link` once, then `npm run dev` (reads `.env.local`) |
 | Tests | `npm test`: syntax check plus an end-to-end test of every API route against a fake Sheets API |
-| Add or change a login | `npm run hash-password -- <user> "<name>"` with the current `PANTRY_USERS` in `.env.local`, paste the output into Vercel, redeploy |
+| Add or remove an admin | edit `ADMIN_EMAILS` in `lib/auth.js`, add the email as a test user (step 1b.2), push. A removed email's sessions end at once |
 | Sign every device out | change `SESSION_SECRET` in Vercel and redeploy |
 | Back up | Google Sheets keeps version history (File → Version history). For an offline copy: File → Download → `.xlsx`. Blob images: Vercel → Storage → Blob → browse/download |
 
@@ -189,11 +200,12 @@ Don't type formulas into data cells.
 browser ──► Vercel edge
              ├─ /, /laporan          ─► api/page.js    (server-rendered page / report)
              ├─ /api.php?action=...  ─► api/pantry.js  (JSON API, same routes as before)
+             ├─ /auth/google[/callback] ─► api/auth.js (Google sign-in redirects)
              └─ /app.js, /styles.css, /vendor/…  (static, public/)
                     │
                     ├─ lib/store.js   data layer (ports of db.php)
                     ├─ lib/sheets.js  Google Sheets REST client (no SDK)
-                    ├─ lib/auth.js    signed-cookie sessions, CSRF, bcrypt, CSP
+                    ├─ lib/auth.js    signed-cookie sessions, Google sign-in, CSRF, CSP
                     └─ @vercel/blob   image uploads
 ```
 
@@ -213,7 +225,8 @@ browser ──► Vercel edge
   4 MB or not a real JPEG/PNG/GIF/WebP.
 - **Logout** replaces this browser's cookie. Because sessions are stateless, a
   *copied* cookie stays valid until it expires (12 h, or 30 days with "Ingat
-  saya"). Changing the password or `SESSION_SECRET` ends all of them.
+  saya"). Changing `SESSION_SECRET`, or removing the email from
+  `ADMIN_EMAILS`, ends all of them.
 - **Vercel Hobby** (free) is for non-commercial use, which suits an internal
   staff fund.
 

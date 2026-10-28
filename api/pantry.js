@@ -2,16 +2,17 @@
  * JSON API (port of api.php). Served at /api.php through a rewrite in
  * vercel.json, so app.js keeps calling "api.php?action=...".
  *
- * Every POST is guarded twice: CSRF first, then the admin check (login and
- * logout are exempt from the admin check only, never from CSRF).
+ * Every POST is guarded twice: CSRF first, then the admin check (logout is
+ * exempt from the admin check only, never from CSRF). Signing in is Google's
+ * redirect flow in api/auth.js, not a POST here.
  */
 import { put } from "@vercel/blob";
 import crypto from "node:crypto";
 import {
   loadSession, commitSession, verifyCsrf, isAdminSession, authInfo,
-  verifyLogin, establishLogin, logout, csrfToken, isAdminUsername, setJsonSecurityHeaders
+  logout, csrfToken, setJsonSecurityHeaders
 } from "../lib/auth.js";
-import { readBody, readJson, sendJson, clientIp } from "../lib/http.js";
+import { readBody, readJson, sendJson } from "../lib/http.js";
 import * as store from "../lib/store.js";
 
 // Vercel refuses request bodies over 4.5 MB; app.js shrinks images first.
@@ -62,7 +63,7 @@ async function handleGet(req, res, sess, action) {
 }
 
 // ---------------------------------------------------------------------------
-// POST routes (admin only, except login/logout)
+// POST routes (admin only, except logout)
 // ---------------------------------------------------------------------------
 
 const POST_ROUTES = {
@@ -188,38 +189,6 @@ function expenseFields(body) {
   };
 }
 
-async function handleLogin(req, res, sess) {
-  const body = await readJson(req) || {};
-  const u = String(body.username ?? "").trim();
-  const p = String(body.password ?? "");
-  if (u === "" || p === "") fail(400, "Sila masukkan Nama Pengguna dan Kata Laluan");
-
-  const ip = clientIp(req);
-  const throttle = await store.loginThrottleCheck(ip, u);
-  if (!throttle.allowed) {
-    fail(429, `Terlalu banyak percubaan log masuk. Sila cuba lagi dalam ${Math.max(1, Math.ceil(throttle.retry_after / 60))} minit.`,
-      { retry_after: throttle.retry_after });
-  }
-
-  const account = await verifyLogin(u, p);
-  if (!account) {
-    await store.loginThrottleRecord(ip, u, false);
-    fail(401, "Nama Pengguna atau Kata Laluan tidak sah");
-  }
-  await store.loginThrottleRecord(ip, u, true);
-
-  establishLogin(sess, account, Boolean(body.remember));
-  commitSession(req, res, sess);
-  return sendJson(res, 200, {
-    success: true,
-    message: "Authenticated successfully",
-    full_name: account.full_name,
-    username: account.username,
-    is_admin: isAdminUsername(account.username),
-    csrf_token: csrfToken(sess)
-  });
-}
-
 async function handleUpload(req, res) {
   const buf = await readBody(req, MAX_UPLOAD_BYTES);
   if (!buf.length) fail(400, "Tiada gambar dimuat naik");
@@ -248,8 +217,6 @@ async function handlePost(req, res, sess, action) {
     commitSession(req, res, sess);
     return sendJson(res, 200, { success: true, message: "Logged out successfully", csrf_token: csrfToken(sess) });
   }
-
-  if (action === "login") return handleLogin(req, res, sess);
 
   if (!isAdminSession(sess)) fail(403, "Unauthorized: Admin session required");
 

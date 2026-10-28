@@ -21,8 +21,11 @@ tracker. Setup is in `README.md`.
 
      Never add giver names, or anything that links an amount to a giver.
    - `api/pantry.js` is the JSON API at `/api.php?action=...` (the old URL, so
-     `app.js` didn't change). It handles session checks, login, uploads and
+     `app.js` didn't change). It handles session checks, logout, uploads and
      every write.
+   - `api/auth.js` is Google sign-in: `/auth/google` redirects to Google, and
+     `/auth/google/callback` comes back to `/?login=<result>`. The flow
+     itself is in `lib/auth.js`.
    - Static files live in `public/`. Do not add static `.html` pages for
      application routing.
 
@@ -60,28 +63,34 @@ tracker. Setup is in `README.md`.
 ## Security rules
 
 1. **Nothing secret in the repository.** Every secret is a Vercel environment
-   variable: the service-account key, `SESSION_SECRET`, `PANTRY_USERS`
-   (bcrypt hashes only) and the Blob token. Locally they live in
+   variable: the service-account key, the Google OAuth client id/secret,
+   `SESSION_SECRET` and the Blob token. Locally they live in
    `.env.local`, which is git-ignored. `migration/` (real staff data) is
    git-ignored too.
 
 2. **`lib/auth.js` is the single source of truth** for sessions, the admin
-   rule, session lifetime, CSRF and the CSP. Never re-implement any of these
-   inline.
-   - Admin is granted by **exact** username match against `ADMIN_USERNAMES`
-     (`zabil`, `5973`). Never match on a substring.
+   rule, Google sign-in, session lifetime, CSRF and the CSP. Never
+   re-implement any of these inline.
+   - Admin is granted by **exact** email match against `ADMIN_EMAILS`
+     (`ahmadzabilalbar@gmail.com`), compared lower-cased. Never match on a
+     substring. Only those emails can sign in at all.
    - Sessions are an HMAC-signed cookie. Lifetime is idle 1 h / absolute 12 h,
-     or 30 days with "Ingat saya". A password change (account fingerprint)
-     or a new `SESSION_SECRET` ends them.
+     or 30 days with "Ingat saya". Removing the email from `ADMIN_EMAILS` or
+     a new `SESSION_SECRET` ends them.
 
 3. **Every POST is guarded twice**: `verifyCsrf()` first, then
-   `isAdminSession()`. `login`/`logout` are exempt from the admin check only,
-   never from CSRF.
+   `isAdminSession()`. `logout` is exempt from the admin check only, never
+   from CSRF.
 
-4. **Logins** are checked by `verifyLogin()` against `PANTRY_USERS`, always
-   with one bcrypt comparison (timing-safe for unknown users). Failed
-   attempts are throttled per IP and per username (`login_attempts` tab).
-   Never hardcode a username or password, and never store plaintext.
+4. **Logins** are Google sign-in only (OAuth authorization code + PKCE). There
+   are no passwords. `finishGoogleLogin()` requires:
+   - a matching one-time `state` from the signed `pantry_oauth` cookie;
+   - an ID token from Google's token endpoint with the right `iss`, `aud`
+     and `exp`;
+   - `email_verified`;
+   - an email in `ADMIN_EMAILS`.
+
+   Never add a password login, and never trust an email the browser sends.
 
 5. **Privacy split.** `buildPublicPayload()` in `lib/store.js` is the **only**
    place that decides what is public. For non-admins it:

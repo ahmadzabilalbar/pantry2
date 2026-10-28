@@ -5,25 +5,42 @@
  */
 import crypto from "node:crypto";
 import assert from "node:assert/strict";
-import bcrypt from "bcryptjs";
 import { TABLES } from "../lib/store.js";
 
+/**
+ * Who the fake Google sign-in says the user is. Tests change `email` or add
+ * `claims` overrides; the last authorization-code exchange is kept in
+ * `lastExchange` so its PKCE verifier can be checked.
+ */
+export const fakeGoogle = { email: "ahmadzabilalbar@gmail.com", name: "Pentadbir Demo", claims: {}, lastExchange: null };
+
 /** Fake credentials so lib/sheets.js and lib/auth.js run unchanged. */
-export async function installFakeEnv(users) {
+export function installFakeEnv() {
   const { privateKey } = crypto.generateKeyPairSync("rsa", { modulusLength: 2048 });
   process.env.GOOGLE_SHEET_ID = "sheet123";
   process.env.GOOGLE_SERVICE_ACCOUNT_JSON = JSON.stringify({
     client_email: "svc@test.iam.gserviceaccount.com",
     private_key: privateKey.export({ type: "pkcs8", format: "pem" })
   });
+  process.env.GOOGLE_OAUTH_CLIENT_ID = "client123.apps.googleusercontent.com";
+  process.env.GOOGLE_OAUTH_CLIENT_SECRET = "fake-client-secret";
   process.env.SESSION_SECRET ||= crypto.randomBytes(32).toString("base64url");
-  const accounts = {};
-  for (const [u, { password, full_name, phpStyle }] of Object.entries(users)) {
-    let hash = await bcrypt.hash(password, 4);
-    if (phpStyle) hash = hash.replace(/^\$2b\$/, "$2y$");
-    accounts[u] = { hash, full_name };
-  }
-  process.env.PANTRY_USERS = JSON.stringify(accounts);
+}
+
+/** The token endpoint's answer to an authorization-code exchange (sign-in). */
+function fakeIdToken(form) {
+  fakeGoogle.lastExchange = Object.fromEntries(form);
+  const enc = obj => Buffer.from(JSON.stringify(obj)).toString("base64url");
+  const claims = {
+    iss: "https://accounts.google.com",
+    aud: process.env.GOOGLE_OAUTH_CLIENT_ID,
+    exp: Math.floor(Date.now() / 1000) + 3600,
+    email: fakeGoogle.email,
+    email_verified: true,
+    name: fakeGoogle.name,
+    ...fakeGoogle.claims
+  };
+  return { access_token: "user-tok", id_token: `${enc({ alg: "RS256" })}.${enc(claims)}.sig` };
 }
 
 export function installFakeSheets() {
@@ -48,7 +65,11 @@ export function installFakeSheets() {
   globalThis.fetch = async (url, init = {}) => {
     url = new URL(url);
     const json = (status, body) => ({ ok: status < 300, status, json: async () => body, text: async () => JSON.stringify(body) });
-    if (url.hostname === "oauth2.googleapis.com") return json(200, { access_token: "tok", expires_in: 3600 });
+    if (url.hostname === "oauth2.googleapis.com") {
+      const form = new URLSearchParams(String(init.body));
+      if (form.get("grant_type") === "authorization_code") return json(200, fakeIdToken(form));
+      return json(200, { access_token: "tok", expires_in: 3600 });
+    }
     assert.equal(init.headers.Authorization, "Bearer tok");
     const path = decodeURIComponent(url.pathname.replace("/v4/spreadsheets/sheet123", ""));
     const body = init.body ? JSON.parse(init.body) : null;

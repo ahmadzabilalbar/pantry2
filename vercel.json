@@ -9,7 +9,9 @@
     { "source": "/", "destination": "/api/page" },
     { "source": "/index.php", "destination": "/api/page" },
     { "source": "/laporan", "destination": "/api/page?view=laporan" },
-    { "source": "/api.php", "destination": "/api/pantry" }
+    { "source": "/api.php", "destination": "/api/pantry" },
+    { "source": "/auth/google", "destination": "/api/auth?step=start" },
+    { "source": "/auth/google/callback", "destination": "/api/auth?step=callback" }
   ],
   "headers": [
     {

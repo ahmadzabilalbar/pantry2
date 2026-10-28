@@ -195,6 +195,7 @@ async function initApp() {
   // api/page.js server-renders the auth state and the privacy-filtered dataset,
   // so a normal page load needs zero API round trips before first paint.
   const bootstrapped = applyBootstrapPayload();
+  showLoginResult();
 
   try {
     if (bootstrapped) {
@@ -230,6 +231,26 @@ function applyBootstrapPayload() {
   state.storageType = "ssr";
   console.log("Bootstrapped from server-rendered payload (0 API round trips)");
   return true;
+}
+
+// Google sign-in returns to "/?login=<result>" (see api/auth.js). Report it,
+// then drop the parameter so a reload doesn't repeat the toast.
+function showLoginResult() {
+  const params = new URLSearchParams(window.location.search);
+  const result = params.get("login");
+  if (!result) return;
+  params.delete("login");
+  const qs = params.toString();
+  history.replaceState(null, "", window.location.pathname + (qs ? `?${qs}` : "") + window.location.hash);
+
+  const messages = {
+    ok: [`Berjaya log masuk sebagai Pentadbir ${state.adminName}!`, "success"],
+    batal: ["Log masuk dibatalkan", "info"],
+    ditolak: ["Akaun Google ini tidak dibenarkan log masuk sebagai Pentadbir", "error"],
+    gagal: ["Log masuk Google gagal. Sila cuba lagi.", "error"]
+  };
+  const [message, type] = messages[result] || messages.gagal;
+  showToast(message, type);
 }
 
 // Check session authentication status via api.php?action=check_auth
@@ -1531,50 +1552,15 @@ function setupEventListeners() {
     });
   }
 
-  // Admin Login Form Submit (local account login in modal without redirect)
-  document.getElementById("formAdminLogin").addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const username = document.getElementById("inputStaffUsername").value.trim();
-    const password = document.getElementById("inputStaffPassword").value;
-    const rememberEl = document.getElementById("inputRememberMe");
-    const remember = rememberEl ? rememberEl.checked : false;
-
-    if (!username || !password) {
-      showToast("Sila masukkan ID Staf / Nama Pengguna dan Kata Laluan", "error");
-      return;
-    }
-
-    try {
-      const { ok, body: result } = await apiPost("api.php?action=login", { username, password, remember });
-
-      if (ok && result.success) {
-        // The server rotated the session id on login, so the old CSRF token is
-        // dead - adopt the fresh one before any further write.
-        if (result.csrf_token) state.csrfToken = result.csrf_token;
-        // Only the bound admin account gets the admin UI. A regular staff member
-        // authenticates successfully but stays a read-only contributor - the
-        // server already refuses their writes, so the UI must agree.
-        state.isAdmin = Boolean(result.is_admin);
-        if (result.full_name) state.adminName = result.full_name;
-        closeModal("modalAdminLogin");
-        document.getElementById("formAdminLogin").reset();
-
-        // The privilege level changed, so the cached payload (and staff list) is
-        // the wrong one - re-fetch both before repainting.
-        await Promise.all([loadData(), loadStaffList()]);
-        updateAllUI();
-
-        showToast(state.isAdmin
-          ? `Berjaya log masuk sebagai Pentadbir ${state.adminName}!`
-          : `Berjaya log masuk sebagai ${state.adminName}.`, "success");
-      } else {
-        showToast(result.error || "Nama Pengguna atau Kata Laluan tidak sah", "error");
-      }
-    } catch (err) {
-      console.error("Login error:", err);
-      showToast("Ralat log masuk autentikasi", "error");
-    }
-  });
+  // Google sign-in is a plain link to /auth/google (a full-page redirect that
+  // lands back on "/?login=<result>"); the checkbox only sets its remember flag.
+  const rememberEl = document.getElementById("inputRememberMe");
+  const googleLoginLink = document.getElementById("btnGoogleLogin");
+  if (rememberEl && googleLoginLink) {
+    rememberEl.addEventListener("change", () => {
+      googleLoginLink.href = rememberEl.checked ? "/auth/google?remember=1" : "/auth/google";
+    });
+  }
 
   // Edit Announcement Button
   const btnEditAnn = document.getElementById("btnEditAnnouncement");

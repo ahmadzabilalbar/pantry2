@@ -6,14 +6,11 @@
  *   npm test
  */
 import { Readable } from "node:stream";
+import crypto from "node:crypto";
 import assert from "node:assert/strict";
-import { installFakeEnv, installFakeSheets } from "./fake-sheets.mjs";
+import { installFakeEnv, installFakeSheets, fakeGoogle } from "./fake-sheets.mjs";
 
-await installFakeEnv({
-  // $2y$ like PHP's password_hash(), to prove old hashes carry over.
-  zabil: { password: "rahsia123", full_name: "Ahmad Zabil", phpStyle: true },
-  staff1: { password: "biasa123", full_name: "Staf Biasa" }
-});
+installFakeEnv();
 const { sheets, calls } = installFakeSheets();
 
 // seed: one event, a settings title, staff, an item
@@ -25,16 +22,18 @@ sheets.items.rows.push(["itm1", "Microwave", 400, 0, 1, "", "seeking", "", "Dapu
 // --------------------------------------------------------------- req/res mocks
 const page = (await import("../api/page.js")).default;
 const api = (await import("../api/pantry.js")).default;
-let cookieJar = "";
+const auth = (await import("../api/auth.js")).default;
+const cookieJar = {}; // name -> value
 
 async function call(handler, { method = "GET", url = "/", body, headers = {} } = {}) {
   const buf = body === undefined ? Buffer.alloc(0) : Buffer.isBuffer(body) ? body : Buffer.from(JSON.stringify(body));
   const req = Readable.from(buf.length ? [buf] : []);
   const u = new URL(url, "https://pantry.test");
+  const cookie = Object.entries(cookieJar).map(([k, v]) => `${k}=${v}`).join("; ");
   Object.assign(req, {
     method, url,
     query: Object.fromEntries(u.searchParams),
-    headers: { host: "pantry.test", "x-forwarded-proto": "https", "x-real-ip": "1.2.3.4", cookie: cookieJar, ...headers }
+    headers: { host: "pantry.test", "x-forwarded-proto": "https", "x-real-ip": "1.2.3.4", cookie, ...headers }
   });
   const res = {
     statusCode: 200, headers: {}, body: "",
@@ -44,13 +43,39 @@ async function call(handler, { method = "GET", url = "/", body, headers = {} } =
   };
   await handler(req, res);
   for (const c of [].concat(res.headers["set-cookie"] || [])) {
-    cookieJar = c.split(";")[0];
+    const pair = c.split(";")[0];
+    const name = pair.slice(0, pair.indexOf("="));
+    const value = pair.slice(pair.indexOf("=") + 1);
+    if (value === "" || /;\s*Max-Age=0\b/i.test(c)) delete cookieJar[name];
+    else cookieJar[name] = value;
   }
   const ct = res.headers["content-type"] || "";
   return { status: res.statusCode, headers: res.headers, json: ct.includes("json") ? JSON.parse(res.body) : null, html: res.body };
 }
 const post = (action, body, csrf, extra = {}) =>
   call(api, { method: "POST", url: `/api.php?action=${action}`, body, headers: { "x-csrf-token": csrf, ...extra } });
+
+/**
+ * Walk the Google sign-in: /auth/google, then Google's redirect back to the
+ * callback. `state` / `error` simulate a forged or cancelled return.
+ * Resolves to { result, callback } where result is the ?login= value.
+ */
+async function googleLogin({ remember = false, state, error } = {}) {
+  let r = await call(auth, { url: `/api/auth?step=start${remember ? "&remember=1" : ""}` });
+  assert.equal(r.status, 302);
+  const to = new URL(r.headers.location);
+  assert.equal(to.origin + to.pathname, "https://accounts.google.com/o/oauth2/v2/auth");
+  assert.equal(to.searchParams.get("client_id"), process.env.GOOGLE_OAUTH_CLIENT_ID);
+  assert.equal(to.searchParams.get("redirect_uri"), "https://pantry.test/auth/google/callback");
+  assert.equal(to.searchParams.get("code_challenge_method"), "S256");
+  const qs = new URLSearchParams({ step: "callback", state: state ?? to.searchParams.get("state") });
+  if (error) qs.set("error", error); else qs.set("code", "c0de");
+  const callback = await call(auth, { url: `/api/auth?${qs}` });
+  assert.equal(callback.status, 302);
+  const result = new URL(callback.headers.location, "https://pantry.test").searchParams.get("login");
+  return { result, callback, challenge: to.searchParams.get("code_challenge") };
+}
+const isAdminNow = async () => (await call(api, { url: "/api.php?action=check_auth" })).json.is_admin;
 
 // ------------------------------------------------------------------- the flow
 let r = await call(page);
@@ -69,28 +94,48 @@ assert.equal(r.json.is_admin, false);
 assert.ok(csrf.length === 64);
 
 // CSRF enforced
-r = await post("login", { username: "zabil", password: "rahsia123" }, "wrong");
+r = await post("logout", {}, "wrong");
 assert.equal(r.status, 403); assert.equal(r.json.csrf_expired, true);
-// non-admin POST refused
+// non-admin POST refused; the old password login is gone
 r = await post("add_staff", { name: "X" }, csrf);
 assert.equal(r.status, 403);
-// bad password
-r = await post("login", { username: "zabil", password: "nope" }, csrf);
-assert.equal(r.status, 401);
-assert.equal(sheets.login_attempts.rows.length, 3, "two throttle identifiers recorded");
-// non-admin account logs in but is not admin
-r = await post("login", { username: "staff1", password: "biasa123" }, csrf);
-assert.equal(r.status, 200); assert.equal(r.json.is_admin, false);
+r = await post("login", { username: "zabil", password: "rahsia123" }, csrf);
+assert.equal(r.status, 403, "no password login route");
+console.log("✓ CSRF enforced, no password login");
+
+// Google sign-in: everything but a verified admin email is refused
+let g = await googleLogin({ state: "forged" });
+assert.equal(g.result, "gagal"); assert.equal(await isAdminNow(), false);
+g = await googleLogin({ error: "access_denied" });
+assert.equal(g.result, "batal");
+fakeGoogle.email = "orang.lain@gmail.com";
+g = await googleLogin();
+assert.equal(g.result, "ditolak"); assert.equal(await isAdminNow(), false);
+fakeGoogle.email = "xahmadzabilalbar@gmail.com";
+assert.equal((await googleLogin()).result, "ditolak", "no substring match");
+fakeGoogle.email = "ahmadzabilalbar@gmail.com";
+fakeGoogle.claims = { email_verified: false };
+assert.equal((await googleLogin()).result, "gagal", "unverified email refused");
+fakeGoogle.claims = { aud: "someone-elses-client" };
+assert.equal((await googleLogin()).result, "gagal", "token for another client refused");
+fakeGoogle.claims = { exp: Math.floor(Date.now() / 1000) - 10 };
+assert.equal((await googleLogin()).result, "gagal", "expired ID token refused");
+fakeGoogle.claims = {};
+assert.equal(await isAdminNow(), false);
+// the admin, in any letter case, with "Ingat saya"
+fakeGoogle.email = "AhmadZabilAlbar@Gmail.com";
+g = await googleLogin({ remember: true });
+assert.equal(g.result, "ok");
+assert.equal(crypto.createHash("sha256").update(fakeGoogle.lastExchange.code_verifier).digest("base64url"), g.challenge, "PKCE verifier matches");
+assert.equal(fakeGoogle.lastExchange.redirect_uri, "https://pantry.test/auth/google/callback");
+assert.ok([].concat(g.callback.headers["set-cookie"]).some(c => c.startsWith("pantry_session=") && /Max-Age=\d{6,}/.test(c)), "remembered login persists");
+assert.equal(cookieJar.pantry_oauth, undefined, "sign-in state cookie is one-use");
+r = await call(api, { url: "/api.php?action=check_auth" });
+assert.equal(r.json.is_admin, true);
+assert.equal(r.json.username, "ahmadzabilalbar@gmail.com");
+assert.notEqual(r.json.csrf_token, csrf, "CSRF token rotated on login");
 csrf = r.json.csrf_token;
-r = await post("add_staff", { name: "X" }, csrf);
-assert.equal(r.status, 403, "non-admin login cannot write");
-r = await post("logout", {}, csrf); csrf = r.json.csrf_token;
-// admin login with a PHP $2y$ hash
-r = await post("login", { username: "ZABIL", password: "rahsia123", remember: true }, csrf);
-assert.equal(r.status, 200); assert.equal(r.json.is_admin, true);
-assert.equal(sheets.login_attempts.rows.length, 1, "throttle rows cleared on success (header only)");
-csrf = r.json.csrf_token;
-console.log("✓ CSRF, admin rule, throttle rows, $2y$ hash login");
+console.log("✓ Google sign-in: state, cancel, non-admin, substring, unverified, aud, exp, PKCE, remember");
 
 // contributions
 r = await post("add_contribution", { name: "AHMAD BIN ALI", username: "1234", amount: 50, date: "2026-10-01T10:30" }, csrf);
@@ -180,7 +225,7 @@ assert.equal(r.status, 403);
 console.log("✓ logout -> public payload anonymised, staff directory refused");
 
 // tampered cookie is rejected
-cookieJar = cookieJar.replace(/.$/, c => (c === "A" ? "B" : "A"));
+cookieJar.pantry_session = cookieJar.pantry_session.replace(/.$/, c => (c === "A" ? "B" : "A"));
 r = await call(api, { url: "/api.php?action=check_auth" });
 assert.equal(r.json.is_admin, false);
 console.log("✓ tampered session cookie ignored");
