@@ -1540,6 +1540,27 @@ body::after {
   gap: 0.5rem;
   font-variant-numeric: tabular-nums;
 }
+.data-table .group-toggle {
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.data-table .group-chevron {
+  width: 0.8em;
+  margin-right: 0.2rem;
+  font-size: 0.65rem;
+  transition: transform 0.15s ease;
+}
+.data-table .group-toggle[aria-expanded="true"] .group-chevron {
+  transform: rotate(90deg);
+}
 .data-table .group-row-count {
   font-weight: 500;
   text-transform: none;

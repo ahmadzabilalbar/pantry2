@@ -6,6 +6,8 @@
 
 // Application State
 const state = {
+  // Expense months shown expanded; starts with the current month only
+  openExpenseMonths: new Set([currentMonthKey()]),
   data: {
     currency: "RM",
     title: "Pantry Aras 2",
@@ -673,6 +675,23 @@ function updateAllUI() {
   applySectionVisibility();
 }
 
+// Local "YYYY-MM" for today
+function currentMonthKey() {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+}
+
+// Open/close one month in the expenses table without re-rendering it
+function toggleExpenseMonth(btn) {
+  const key = btn.dataset.month;
+  const open = !state.openExpenseMonths.has(key);
+  if (open) state.openExpenseMonths.add(key); else state.openExpenseMonths.delete(key);
+  btn.setAttribute("aria-expanded", String(open));
+  btn.closest("tbody").querySelectorAll("tr[data-month]").forEach(tr => {
+    if (tr.dataset.month === key) tr.hidden = !open;
+  });
+}
+
 const MALAY_MONTHS = ["Januari", "Februari", "Mac", "April", "Mei", "Jun",
   "Julai", "Ogos", "September", "Oktober", "November", "Disember"];
 
@@ -731,6 +750,21 @@ function renderPublicExpenses(currency) {
       </td>
     </tr>`;
 
+  // Only the open months show their rows; the rest collapse to the header
+  const monthRow = (group) => {
+    const open = state.openExpenseMonths.has(group.key);
+    return `
+    <tr class="month-row">
+      <td colspan="${colCount}">
+        <button type="button" class="group-row-inner group-toggle" data-action="toggle-expense-month"
+                data-month="${escapeHtml(group.key)}" aria-expanded="${open}">
+          <span><i class="fa-solid fa-chevron-right group-chevron"></i> ${escapeHtml(formatMonthLabel(group.key))} <span class="group-row-count">${group.items.length} rekod</span></span>
+          <span>${currency} ${formatMoney(group.sum)}</span>
+        </button>
+      </td>
+    </tr>`;
+  };
+
   container.innerHTML = `
     <div class="table-card" style="margin-top: 1rem;">
       <div class="table-container">
@@ -749,7 +783,7 @@ function renderPublicExpenses(currency) {
             ${years.map(year => `
             ${groupRow("year-row", year.key ? `Tahun ${year.key}` : "Tiada Tarikh", year.count, year.sum)}
             ${year.months.map(group => `
-            ${year.key ? groupRow("month-row", formatMonthLabel(group.key), group.items.length, group.sum) : ""}
+            ${year.key ? monthRow(group) : ""}
             ${group.items.map(exp => {
               const idx = rowNo++;
               const amountVal = parseFloat(exp.amount) || 0;
@@ -761,7 +795,7 @@ function renderPublicExpenses(currency) {
               const receiptImg = exp.receipt_image ? escapeHtml(exp.receipt_image) : "";
 
               return `
-                <tr>
+                <tr data-month="${escapeHtml(group.key)}"${group.key && !state.openExpenseMonths.has(group.key) ? " hidden" : ""}>
                   <td class="col-idx">${idx + 1}</td>
                   <td class="col-date">${date}</td>
                   <td class="col-main">
@@ -1425,6 +1459,7 @@ const DELEGATED_ACTIONS = {
   "delete-staff": el => confirmDeleteStaff(el.dataset.id),
   "open-add-expense": () => openAddExpenseModal(),
   "manage-expense-categories": () => manageExpenseCategories(),
+  "toggle-expense-month": el => toggleExpenseMonth(el),
   "edit-event": el => openEditEventModal(parseInt(el.dataset.id, 10)),
   "remove-media": el => removeMediaImage(parseInt(el.dataset.index, 10)),
   "slide-prev": el => slideItemImage(el.dataset.id, -1),
