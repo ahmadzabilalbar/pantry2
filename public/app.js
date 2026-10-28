@@ -693,18 +693,17 @@ function renderPublicExpenses(currency) {
   const totalExpensesSum = expenses.reduce((sum, e) => sum + (parseFloat(e.amount) || 0), 0);
 
   container.innerHTML = `
-    <div class="table-card" style="margin-top: 1rem; overflow: hidden; border-radius: var(--radius-lg); border: 1px solid var(--border-glass); background: var(--bg-card);">
+    <div class="table-card" style="margin-top: 1rem;">
       <div class="table-container">
-        <table class="data-table expenses-data-table">
+        <table class="data-table">
           <thead>
             <tr>
-              <th style="width: 45px; text-align: center;">Bil</th>
-              <th style="width: 110px;">Tarikh</th>
-              <th>Perbelanjaan / Tajuk</th>
-              <th style="width: 160px;">Kategori</th>
-              <th style="width: 130px; text-align: right;">Jumlah</th>
-              <th style="width: 90px; text-align: center;">Resit</th>
-              ${state.isAdmin ? `<th style="width: 130px; text-align: center;">Tindakan</th>` : ''}
+              <th class="col-idx">#</th>
+              <th>Tarikh</th>
+              <th>Perbelanjaan</th>
+              <th class="col-num">Jumlah</th>
+              <th class="col-center">Resit</th>
+              ${state.isAdmin ? `<th class="col-actions">Tindakan</th>` : ''}
             </tr>
           </thead>
           <tbody>
@@ -719,34 +718,27 @@ function renderPublicExpenses(currency) {
 
               return `
                 <tr>
-                  <td style="text-align: center; color: var(--text-muted); font-weight: 600;">${idx + 1}</td>
-                  <td style="white-space: nowrap; color: var(--text-secondary); font-size: 0.825rem;">
-                    <i class="fa-solid fa-calendar-day" style="color: #94a3b8; font-size: 0.75rem; margin-right: 4px;"></i>${date}
+                  <td class="col-idx">${idx + 1}</td>
+                  <td class="col-date">${date}</td>
+                  <td class="col-main">
+                    ${title}
+                    <span class="cell-sub"><span class="expense-cat-badge"><i class="fa-solid fa-tag"></i> ${cat}</span>${staffName ? ` Pembeli: ${staffName}` : ''}</span>
+                    ${notes ? `<span class="cell-sub">${notes}</span>` : ''}
                   </td>
-                  <td>
-                    <div style="font-weight: 700; color: var(--text-primary); font-size: 0.925rem;">${title}</div>
-                    ${staffName ? `<div style="font-size: 0.8rem; color: #a78bfa; font-weight: 600; margin-top: 0.2rem;"><i class="fa-solid fa-user-tag" style="font-size: 0.75rem; margin-right: 3px;"></i> Pembeli: ${staffName}</div>` : ''}
-                    ${notes ? `<div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.15rem; line-height: 1.3;">${notes}</div>` : ''}
-                  </td>
-                  <td>
-                    <span class="expense-cat-badge"><i class="fa-solid fa-tag"></i> ${cat}</span>
-                  </td>
-                  <td style="text-align: right; font-weight: 800; color: #c084fc; font-size: 0.95rem; white-space: nowrap;">
-                    ${currency} ${formatMoney(amountVal)}
-                  </td>
-                  <td style="text-align: center;">
+                  <td class="col-num" style="color: #c084fc;">${currency} ${formatMoney(amountVal)}</td>
+                  <td class="col-center">
                     ${receiptImg ? `
                       <a href="${receiptImg}" target="_blank" class="receipt-thumb-link" title="Lihat Resit Penuh">
                         <img src="${receiptImg}" alt="Resit" class="receipt-thumb-img" loading="lazy" decoding="async">
                       </a>
-                    ` : `<span style="color: var(--text-muted); font-size: 0.8rem;">-</span>`}
+                    ` : `<span style="color: var(--text-muted);">-</span>`}
                   </td>
                   ${state.isAdmin ? `
-                    <td style="text-align: center; white-space: nowrap;">
-                      <button type="button" class="btn btn-sm btn-secondary" data-action="edit-expense" data-id="${exp.id}" style="font-size: 0.725rem; padding: 0.2rem 0.5rem; margin-right: 0.2rem;" title="Kemaskini">
+                    <td class="col-actions">
+                      <button type="button" class="btn btn-secondary btn-icon" data-action="edit-expense" data-id="${exp.id}" title="Kemaskini">
                         <i class="fa-solid fa-pen-to-square"></i>
                       </button>
-                      <button type="button" class="btn btn-sm btn-danger-soft" data-action="delete-expense" data-id="${exp.id}" style="font-size: 0.725rem; padding: 0.2rem 0.5rem;" title="Padam">
+                      <button type="button" class="btn btn-danger-soft btn-icon" data-action="delete-expense" data-id="${exp.id}" title="Padam">
                         <i class="fa-solid fa-trash"></i>
                       </button>
                     </td>
@@ -756,13 +748,10 @@ function renderPublicExpenses(currency) {
             }).join('')}
           </tbody>
           <tfoot>
-            <tr style="background: rgba(192, 132, 252, 0.08); font-weight: 700; border-top: 2px solid rgba(192, 132, 252, 0.3);">
-              <td colspan="4" style="text-align: right; padding: 0.75rem 1rem; color: var(--text-primary); font-size: 0.9rem;">
-                Jumlah Keseluruhan Perbelanjaan:
-              </td>
-              <td style="text-align: right; padding: 0.75rem 0.85rem; font-weight: 800; color: #c084fc; font-size: 1.05rem; white-space: nowrap;">
-                ${currency} ${formatMoney(totalExpensesSum)}
-              </td>
+            <tr>
+              <td class="col-idx"></td>
+              <td colspan="2" style="text-align: right;">Jumlah Perbelanjaan</td>
+              <td class="col-num" style="color: #c084fc;">${currency} ${formatMoney(totalExpensesSum)}</td>
               <td colspan="${state.isAdmin ? 2 : 1}"></td>
             </tr>
           </tfoot>
@@ -1060,7 +1049,7 @@ function renderAdminGiverReport(currency) {
   if (filtered.length === 0) {
     tbody.innerHTML = `
       <tr>
-        <td colspan="5" style="text-align: center; padding: 2.5rem; color: var(--text-muted);">
+        <td colspan="5" class="col-empty">
           Tiada rekod transaksi dijumpai.
         </td>
       </tr>`;
@@ -1103,24 +1092,17 @@ function renderAdminGiverReport(currency) {
   tbody.innerHTML = displayList.map((item, index) => {
     return `
       <tr>
-        <td style="color: var(--text-muted); font-size: 0.8rem;">${index + 1}</td>
-        <td style="font-weight: 700; color: var(--text-primary);">
+        <td class="col-idx">${index + 1}</td>
+        <td class="col-main">
           ${escapeHtml(item.name)}
-          ${item.note ? `<div style="font-size: 0.75rem; font-weight: 400; color: var(--text-muted); margin-top: 0.15rem;">${escapeHtml(item.note)}</div>` : ''}
+          ${item.note ? `<span class="cell-sub">${escapeHtml(item.note)}</span>` : ''}
         </td>
-        <td>
-          <span style="font-weight: 800; color: #6ee7b7; font-size: 0.95rem;">
-            ${currency} ${formatMoney(item.amount)}
-          </span>
-        </td>
-        <td style="color: var(--text-secondary); font-size: 0.85rem; white-space: nowrap;">
-          <i class="fa-regular fa-clock" style="font-size: 0.75rem; color: var(--accent-primary); margin-right: 0.25rem;"></i>
-          ${formatDateTimeDisplay(item.date)}
-        </td>
-        <td style="text-align: center; white-space: nowrap;">
-          <button type="button" class="btn btn-sm btn-danger-soft" data-action="delete-contribution"
+        <td class="col-num" style="color: #6ee7b7;">${currency} ${formatMoney(item.amount)}</td>
+        <td class="col-date">${formatDateTimeDisplay(item.date)}</td>
+        <td class="col-actions">
+          <button type="button" class="btn btn-danger-soft btn-icon" data-action="delete-contribution"
                   data-id="${escapeHtml(String(item.id))}" data-name="${escapeHtml(item.name)}"
-                  title="Padam rekod sumbangan ini" style="font-size: 0.725rem; padding: 0.2rem 0.5rem;">
+                  title="Padam rekod sumbangan ini">
             <i class="fa-solid fa-trash"></i>
           </button>
         </td>
@@ -2938,8 +2920,7 @@ function renderAdminStaffManagement() {
   if (filtered.length === 0) {
     tbody.innerHTML = `
       <tr>
-        <td colspan="3" style="text-align: center; padding: 2rem; color: var(--text-muted);">
-          <i class="fa-solid fa-folder-open" style="font-size: 2rem; margin-bottom: 0.5rem; display: block; opacity: 0.5;"></i>
+        <td colspan="3" class="col-empty">
           ${query ? 'Tiada staf ditemui mengikut carian anda.' : 'Tiada rekod staf dalam pangkalan data.'}
         </td>
       </tr>
@@ -2949,9 +2930,9 @@ function renderAdminStaffManagement() {
 
   tbody.innerHTML = filtered.map((s, idx) => `
     <tr>
-      <td class="staff-idx">${idx + 1}</td>
-      <td class="staff-name">${escapeHtml(s.name)}</td>
-      <td class="staff-actions">
+      <td class="col-idx">${idx + 1}</td>
+      <td class="col-main">${escapeHtml(s.name)}</td>
+      <td class="col-actions">
         <button type="button" class="btn btn-secondary btn-icon" data-action="edit-staff" data-id="${s.id || 0}" title="Edit Staf">
           <i class="fa-solid fa-pen-to-square"></i>
         </button>

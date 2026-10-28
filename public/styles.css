@@ -1416,11 +1416,22 @@ body::after {
   overflow-x: auto;
 }
 
+/* Data tables: one dense style for every table in the app. Mobile first: tight
+   padding on phones, a little more air from 768px. Cells use the col-* helpers
+   below instead of inline styles so all tables stay identical. */
 .data-table {
   width: 100%;
   border-collapse: collapse;
   text-align: left;
-  font-size: 0.85rem;
+  font-size: 0.78rem;
+  line-height: 1.3;
+}
+
+.data-table th,
+.data-table td {
+  padding: 0.3rem 0.5rem;
+  border-bottom: 1px solid var(--border-glass);
+  vertical-align: middle;
 }
 
 .data-table th {
@@ -1428,20 +1439,16 @@ body::after {
   top: 0;
   z-index: 10;
   background: var(--table-header-bg);
-  padding: 0.55rem 0.85rem;
   color: var(--text-secondary);
   font-weight: 700;
   text-transform: uppercase;
-  font-size: 0.725rem;
-  letter-spacing: 0.05em;
-  border-bottom: 1px solid var(--border-glass);
+  font-size: 0.65rem;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
 }
 
 .data-table td {
-  padding: 0.45rem 0.85rem;
-  border-bottom: 1px solid var(--border-glass);
   color: var(--text-primary);
-  vertical-align: middle;
 }
 
 .data-table tbody tr {
@@ -1452,35 +1459,79 @@ body::after {
   background: var(--table-row-hover);
 }
 
-/* Staff directory: a long, scan-only list, so rows are kept tight */
-.staff-table th,
-.staff-table td {
-  padding: 0.2rem 0.75rem;
+.data-table tfoot td {
+  font-weight: 700;
+  border-top: 1px solid var(--border-glass);
+  border-bottom: 0;
 }
-.staff-table td {
-  font-size: 0.8rem;
-  line-height: 1.3;
-}
-.staff-table .staff-idx {
-  width: 3rem;
+
+.data-table .col-idx {
+  width: 2rem;
   color: var(--text-muted);
   font-variant-numeric: tabular-nums;
 }
-.staff-table .staff-name {
-  font-weight: 500;
+.data-table .col-main {
+  font-weight: 600;
 }
-.staff-table .staff-actions {
+.data-table .col-date {
+  white-space: nowrap;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+.data-table .col-num {
   text-align: right;
   white-space: nowrap;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
 }
-.staff-table .staff-actions .btn-icon {
+.data-table .col-center {
+  text-align: center;
+}
+.data-table .col-actions {
+  text-align: right;
+  white-space: nowrap;
+  width: 1%;
+}
+.data-table .col-empty {
+  text-align: center;
+  padding: 1.5rem 0.5rem;
+  color: var(--text-muted);
+}
+
+/* Second line under a cell's main text (notes, buyer, category) */
+.data-table .cell-sub {
+  display: block;
+  margin-top: 0.1rem;
+  font-size: 0.7rem;
+  font-weight: 400;
+  color: var(--text-muted);
+}
+
+.data-table .btn-icon {
   width: 26px;
   height: 26px;
   font-size: 0.7rem;
   border-radius: 6px;
 }
-.staff-table .staff-actions .btn-icon + .btn-icon {
+.data-table .btn-icon + .btn-icon {
   margin-left: 0.25rem;
+}
+
+/* Phones drop the row number; it only helps when scanning on a wide screen */
+@media (max-width: 599px) {
+  .data-table .col-idx {
+    display: none;
+  }
+}
+
+@media (min-width: 768px) {
+  .data-table {
+    font-size: 0.82rem;
+  }
+  .data-table th,
+  .data-table td {
+    padding: 0.35rem 0.75rem;
+  }
 }
 
 /* Modals */
@@ -2121,13 +2172,13 @@ select.form-control option:checked {
   background: rgba(192, 132, 252, 0.15);
   color: #c084fc;
   border: 1px solid rgba(192, 132, 252, 0.3);
-  padding: 0.15rem 0.55rem;
+  padding: 0 0.4rem;
   border-radius: 9999px;
   font-weight: 700;
-  font-size: 0.75rem;
+  font-size: 0.65rem;
   display: inline-flex;
   align-items: center;
-  gap: 0.3rem;
+  gap: 0.25rem;
   white-space: nowrap;
 }
 
@@ -2147,18 +2198,10 @@ select.form-control option:checked {
 }
 
 .receipt-thumb-img {
-  width: 34px;
-  height: 34px;
+  width: 26px;
+  height: 26px;
   object-fit: cover;
   display: block;
-}
-
-.expenses-data-table tbody tr {
-  transition: var(--transition);
-}
-
-.expenses-data-table tbody tr:hover {
-  background: var(--table-row-hover);
 }
 
 /* Section Toggle Items Modal Styling */
