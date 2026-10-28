@@ -1,5 +1,7 @@
 # Pantry 2 — Vercel + Google Sheets
 
+Live: <https://pantry-aras2.vercel.app/> (report: <https://pantry-aras2.vercel.app/laporan>)
+
 The staff pantry fund tracker, moved off XAMPP/MySQL:
 
 | Part | Where it runs |

@@ -36,8 +36,20 @@ export default async function handler(req, res) {
   const nonce = newNonce();
   setPageSecurityHeaders(res, nonce);
 
-  const sess = loadSession(req);
-  commitSession(req, res, sess);
+  let sess;
+  try {
+    sess = loadSession(req);
+    commitSession(req, res, sess);
+  } catch (e) {
+    // Almost always a missing environment variable (SESSION_SECRET) on a new
+    // deployment: say so instead of Vercel's bare FUNCTION_INVOCATION_FAILED.
+    console.error("page: session setup failed:", e.message);
+    return sendHtml(res, 500, `<!DOCTYPE html><html lang="ms"><meta charset="UTF-8"><title>Konfigurasi belum lengkap</title>
+<body style="font-family: system-ui, sans-serif; max-width: 34rem; margin: 4rem auto; padding: 0 1rem; line-height: 1.5;">
+<h1>Konfigurasi pelayan belum lengkap</h1>
+<p>Pemboleh ubah persekitaran (environment variables) aplikasi belum ditetapkan di Vercel. Lihat langkah 5 dalam README.md, kemudian deploy semula.</p>
+</body></html>`);
+  }
   const isAdmin = isAdminSession(sess);
 
   let data = store.FALLBACK_DATA;
