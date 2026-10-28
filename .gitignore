@@ -1,0 +1,14 @@
+# Secrets: service-account key, session secret, password hashes, Blob token.
+.env
+.env.*
+!.env.example
+
+# Data exported from the old MySQL app. Holds real staff names and the full
+# contribution ledger - never commit it.
+migration/
+
+node_modules/
+.vercel/
+*.log
+.DS_Store
+Thumbs.db

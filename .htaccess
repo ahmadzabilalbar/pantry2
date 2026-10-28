@@ -1,0 +1,5 @@
+# This folder sits inside XAMPP's htdocs only because that is where the source
+# lives. It is deployed to Vercel, never served by Apache - and it may hold
+# .env.local (service-account key, session secret) and migration/ (real staff
+# data) while you work on it. Refuse everything.
+Require all denied

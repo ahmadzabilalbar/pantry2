@@ -1,0 +1,23 @@
+{
+  "name": "pantry2",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Staff pantry fund collection tracker on Vercel, with Google Sheets as the database",
+  "type": "module",
+  "engines": {
+    "node": "22.x"
+  },
+  "scripts": {
+    "dev": "vercel dev",
+    "preview": "node tools/preview.mjs",
+    "test": "node tools/lint.mjs && node tools/test.mjs",
+    "lint": "node tools/lint.mjs",
+    "sheet:init": "node --env-file=.env.local tools/init-sheet.mjs",
+    "sheet:import": "node --env-file=.env.local tools/import.mjs",
+    "hash-password": "node tools/hash-password.mjs"
+  },
+  "dependencies": {
+    "@vercel/blob": "^2.8.0",
+    "bcryptjs": "^3.0.2"
+  }
+}
