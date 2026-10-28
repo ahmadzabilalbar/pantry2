@@ -33,7 +33,11 @@ sheets.contributions.rows.push(
   [1, "AHMAD BIN ALI", "1234", 50, "2026-10-02 10:15", "paid", "", "2026-10-02 10:15:00"],
   [2, "SITI BINTI ABU", "2345", 30, "2026-10-03 14:40", "paid", "", "2026-10-03 14:40:00"]
 );
-sheets.expenses.rows.push([1, "Sabun & Tisu", 18.9, "2026-10-04", "Lain-lain", "SITI BINTI ABU", "", "", "2026-10-04 12:00:00"]);
+sheets.expenses.rows.push(
+  [1, "Sabun & Tisu", 18.9, "2026-10-04", "Lain-lain", "SITI BINTI ABU", "", "", "2026-10-04 12:00:00"],
+  [2, "Kopi & Gula", 25.5, "2026-09-20", "Minuman", "AHMAD BIN ALI", "Stok sebulan", "", "2026-09-20 09:00:00"],
+  [3, "Penapis Air", 120, "2025-12-15", "Peralatan", "AHMAD BIN ALI", "", "", "2025-12-15 10:00:00"]
+);
 
 const page = (await import("../api/page.js")).default;
 const api = (await import("../api/pantry.js")).default;

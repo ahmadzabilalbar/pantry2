@@ -673,6 +673,16 @@ function updateAllUI() {
   applySectionVisibility();
 }
 
+const MALAY_MONTHS = ["Januari", "Februari", "Mac", "April", "Mei", "Jun",
+  "Julai", "Ogos", "September", "Oktober", "November", "Disember"];
+
+// "2026-10" -> "Oktober 2026"
+function formatMonthLabel(key) {
+  const m = /^(\d{4})-(\d{2})$/.exec(key || "");
+  if (!m) return "Tiada Tarikh";
+  return `${MALAY_MONTHS[parseInt(m[2], 10) - 1] || m[2]} ${m[1]}`;
+}
+
 // Render Public Expenses & Receipts Table Section
 function renderPublicExpenses(currency) {
   const container = document.getElementById("expensesGridContainer");
@@ -691,6 +701,35 @@ function renderPublicExpenses(currency) {
   }
 
   const totalExpensesSum = expenses.reduce((sum, e) => sum + (parseFloat(e.amount) || 0), 0);
+  const colCount = state.isAdmin ? 6 : 5;
+
+  // Newest first, grouped by month (dates are YYYY-MM-DD)
+  const sorted = [...expenses].sort((a, b) =>
+    String(b.date || "").localeCompare(String(a.date || "")) || (parseInt(b.id, 10) || 0) - (parseInt(a.id, 10) || 0));
+  const years = [];
+  for (const exp of sorted) {
+    const key = /^\d{4}-\d{2}/.test(exp.date || "") ? exp.date.slice(0, 7) : "";
+    const amount = parseFloat(exp.amount) || 0;
+    let year = years[years.length - 1];
+    if (!year || year.key !== key.slice(0, 4)) years.push(year = { key: key.slice(0, 4), months: [], sum: 0, count: 0 });
+    let month = year.months[year.months.length - 1];
+    if (!month || month.key !== key) year.months.push(month = { key, items: [], sum: 0 });
+    month.items.push(exp);
+    month.sum += amount;
+    year.sum += amount;
+    year.count++;
+  }
+  let rowNo = 0;
+
+  const groupRow = (cls, label, count, sum) => `
+    <tr class="${cls}">
+      <td colspan="${colCount}">
+        <div class="group-row-inner">
+          <span>${escapeHtml(label)} <span class="group-row-count">${count} rekod</span></span>
+          <span>${currency} ${formatMoney(sum)}</span>
+        </div>
+      </td>
+    </tr>`;
 
   container.innerHTML = `
     <div class="table-card" style="margin-top: 1rem;">
@@ -707,7 +746,12 @@ function renderPublicExpenses(currency) {
             </tr>
           </thead>
           <tbody>
-            ${expenses.map((exp, idx) => {
+            ${years.map(year => `
+            ${groupRow("year-row", year.key ? `Tahun ${year.key}` : "Tiada Tarikh", year.count, year.sum)}
+            ${year.months.map(group => `
+            ${year.key ? groupRow("month-row", formatMonthLabel(group.key), group.items.length, group.sum) : ""}
+            ${group.items.map(exp => {
+              const idx = rowNo++;
               const amountVal = parseFloat(exp.amount) || 0;
               const cat = escapeHtml(exp.category || "Lain-lain");
               const title = escapeHtml(exp.title || "Perbelanjaan Pantry");
@@ -745,7 +789,7 @@ function renderPublicExpenses(currency) {
                   ` : ''}
                 </tr>
               `;
-            }).join('')}
+            }).join('')}`).join('')}`).join('')}
           </tbody>
           <tfoot>
             <tr>

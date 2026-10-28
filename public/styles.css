@@ -1517,6 +1517,36 @@ body::after {
   margin-left: 0.25rem;
 }
 
+/* Group header rows inside a table (expenses by year, then month) */
+.data-table .year-row td,
+.data-table .month-row td {
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #c084fc;
+}
+.data-table .year-row td {
+  background: rgba(192, 132, 252, 0.16);
+  font-size: 0.75rem;
+}
+.data-table .month-row td {
+  background: rgba(192, 132, 252, 0.06);
+  padding-left: 1rem;
+}
+.data-table .group-row-inner {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-variant-numeric: tabular-nums;
+}
+.data-table .group-row-count {
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--text-muted);
+}
+
 /* Phones drop the row number; it only helps when scanning on a wide screen */
 @media (max-width: 599px) {
   .data-table .col-idx {
