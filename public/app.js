@@ -630,13 +630,13 @@ function updateAllUI() {
 
   // 2. Update Metric Stat Cards (Jumlah Kutipan Terkini, Jumlah Perbelanjaan Terkini, Baki)
   const totalCollectedEl = document.getElementById("statTotalCollected");
-  if (totalCollectedEl) totalCollectedEl.textContent = `${currency} ${formatMoney(totalCollected)}`;
+  if (totalCollectedEl) totalCollectedEl.textContent = formatMoney(totalCollected);
 
   const totalExpensesEl = document.getElementById("statTotalExpenses");
-  if (totalExpensesEl) totalExpensesEl.textContent = `${currency} ${formatMoney(totalExpenses)}`;
+  if (totalExpensesEl) totalExpensesEl.textContent = formatMoney(totalExpenses);
 
   const bakiSemasaEl = document.getElementById("statBakiSemasa");
-  if (bakiSemasaEl) bakiSemasaEl.textContent = `${currency} ${formatMoney(bakiSemasa)}`;
+  if (bakiSemasaEl) bakiSemasaEl.textContent = formatMoney(bakiSemasa);
 
   const bakiCardEl = document.getElementById("statBakiCard");
   if (bakiCardEl) {
@@ -745,7 +745,7 @@ function renderPublicExpenses(currency) {
       <td colspan="${colCount}">
         <div class="group-row-inner">
           <span>${escapeHtml(label)} <span class="group-row-count">${count} rekod</span></span>
-          <span>${currency} ${formatMoney(sum)}</span>
+          <span>${formatMoney(sum)}</span>
         </div>
       </td>
     </tr>`;
@@ -759,7 +759,7 @@ function renderPublicExpenses(currency) {
         <button type="button" class="group-row-inner group-toggle" data-action="toggle-expense-month"
                 data-month="${escapeHtml(group.key)}" aria-expanded="${open}">
           <span><i class="fa-solid fa-chevron-right group-chevron"></i> ${escapeHtml(formatMonthLabel(group.key))} <span class="group-row-count">${group.items.length} rekod</span></span>
-          <span>${currency} ${formatMoney(group.sum)}</span>
+          <span>${formatMoney(group.sum)}</span>
         </button>
       </td>
     </tr>`;
@@ -803,7 +803,7 @@ function renderPublicExpenses(currency) {
                     <span class="cell-sub"><span class="expense-cat-badge"><i class="fa-solid fa-tag"></i> ${cat}</span>${staffName ? ` Pembeli: ${staffName}` : ''}</span>
                     ${notes ? `<span class="cell-sub">${notes}</span>` : ''}
                   </td>
-                  <td class="col-num" style="color: #c084fc;">${currency} ${formatMoney(amountVal)}</td>
+                  <td class="col-num" style="color: #c084fc;">${formatMoney(amountVal)}</td>
                   <td class="col-center">
                     ${receiptImg ? `
                       <a href="${receiptImg}" target="_blank" class="receipt-thumb-link" title="Lihat Resit Penuh">
@@ -829,7 +829,7 @@ function renderPublicExpenses(currency) {
             <tr>
               <td class="col-idx"></td>
               <td colspan="2" style="text-align: right;">Jumlah Perbelanjaan</td>
-              <td class="col-num" style="color: #c084fc;">${currency} ${formatMoney(totalExpensesSum)}</td>
+              <td class="col-num" style="color: #c084fc;">${formatMoney(totalExpensesSum)}</td>
               <td colspan="${state.isAdmin ? 2 : 1}"></td>
             </tr>
           </tfoot>
@@ -927,21 +927,24 @@ function renderGiverCoins() {
   container.innerHTML = coinsList.map((g) => {
     const amountVal = Number(g.amount) || 0;
     return `
-      <div class="giver-coin-chip" title="${currency} ${formatMoney(amountVal)}">
+      <div class="giver-coin-chip" title="${formatMoney(amountVal)}">
         <div class="giver-coin-icon">
           <i class="fa-solid fa-coins"></i>
         </div>
-        <span class="giver-coin-amount">${currency} ${formatMoney(amountVal)}</span>
+        <span class="giver-coin-amount">${formatMoney(amountVal)}</span>
       </div>
     `;
   }).join('');
 }
 
-// Format Currency Helper
+// Format Currency Helper: no currency prefix on the page; whole amounts drop
+// ".00" (50), others keep cents (12.50). Mirrors money() in api/page.js.
 function formatMoney(num) {
-  return (parseFloat(num) || 0).toLocaleString("en-US", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2
+  const n = Math.round((parseFloat(num) || 0) * 100) / 100;
+  const cents = Number.isInteger(n) ? 0 : 2;
+  return n.toLocaleString("en-US", {
+    minimumFractionDigits: cents,
+    maximumFractionDigits: cents
   });
 }
 
@@ -1046,8 +1049,8 @@ function renderItemsGrid(currency) {
 
         <div>
           <div class="item-progress-info">
-            <span class="item-collected-amount">${currency} ${formatMoney(itemCollected)}</span>
-            <span class="item-target-amount" style="font-weight: 700; color: var(--text-primary);">Sasaran: <strong style="font-weight: 800; color: #ffffff;">${currency} ${formatMoney(targetPrice)}</strong></span>
+            <span class="item-collected-amount">${formatMoney(itemCollected)}</span>
+            <span class="item-target-amount" style="font-weight: 700; color: var(--text-primary);">Sasaran: <strong style="font-weight: 800; color: #ffffff;">${formatMoney(targetPrice)}</strong></span>
           </div>
 
           <div class="progress-track" style="height: 10px; margin-bottom: 0.5rem;">
@@ -1056,7 +1059,7 @@ function renderItemsGrid(currency) {
 
           <div style="display: flex; justify-content: space-between; font-size: 0.775rem; color: var(--text-muted);">
             <span>${progressPercent}% dibiayai</span>
-            <span>${itemRemaining > 0 ? `${currency} ${formatMoney(itemRemaining)} masih diperlukan` : 'Sepenuhnya Dibiayai!'}</span>
+            <span>${itemRemaining > 0 ? `${formatMoney(itemRemaining)} masih diperlukan` : 'Sepenuhnya Dibiayai!'}</span>
           </div>
 
           ${state.isAdmin ? `
@@ -1175,7 +1178,7 @@ function renderAdminGiverReport(currency) {
           ${escapeHtml(item.name)}
           ${item.note ? `<span class="cell-sub">${escapeHtml(item.note)}</span>` : ''}
         </td>
-        <td class="col-num" style="color: #6ee7b7;">${currency} ${formatMoney(item.amount)}</td>
+        <td class="col-num" style="color: #6ee7b7;">${formatMoney(item.amount)}</td>
         <td class="col-date">${formatDateTimeDisplay(item.date)}</td>
         <td class="col-actions">
           <button type="button" class="btn btn-danger-soft btn-icon" data-action="delete-contribution"
@@ -2379,8 +2382,8 @@ function renderEventsListModal() {
           </div>
           ${ev.description ? `<div style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0.35rem;">${escapeHtml(ev.description)}</div>` : ''}
           <div class="event-meta-details">
-            <span><i class="fa-solid fa-sack-dollar" style="color: #6ee7b7;"></i> ${currency} ${formatMoney(ev.total_collected)}</span>
-            <span><i class="fa-solid fa-bullseye" style="color: var(--accent-secondary);"></i> ${currency} ${formatMoney(ev.target_total)}</span>
+            <span><i class="fa-solid fa-sack-dollar" style="color: #6ee7b7;"></i> ${formatMoney(ev.total_collected)}</span>
+            <span><i class="fa-solid fa-bullseye" style="color: var(--accent-secondary);"></i> ${formatMoney(ev.target_total)}</span>
             <span><i class="fa-solid fa-calendar-days"></i> ${ev.created_at ? ev.created_at.split(' ')[0] : ''}</span>
           </div>
         </div>
@@ -2653,13 +2656,13 @@ function renderWhatsappPosterCard() {
   }
 
   const posterTotalCollected = document.getElementById("posterTotalCollected");
-  if (posterTotalCollected) posterTotalCollected.textContent = `${currency} ${formatMoney(totalCollected)}`;
+  if (posterTotalCollected) posterTotalCollected.textContent = formatMoney(totalCollected);
 
   const posterTotalExpenses = document.getElementById("posterTotalExpenses");
-  if (posterTotalExpenses) posterTotalExpenses.textContent = `${currency} ${formatMoney(totalExpenses)}`;
+  if (posterTotalExpenses) posterTotalExpenses.textContent = formatMoney(totalExpenses);
 
   const posterBakiSemasa = document.getElementById("posterBakiSemasa");
-  if (posterBakiSemasa) posterBakiSemasa.textContent = `${currency} ${formatMoney(bakiSemasa)}`;
+  if (posterBakiSemasa) posterBakiSemasa.textContent = formatMoney(bakiSemasa);
 
   const posterBakiCard = document.getElementById("posterBakiCard");
   if (posterBakiCard) {
@@ -2732,7 +2735,7 @@ function renderWhatsappPosterCard() {
             <span>${escapeHtml(item.name)} ${qty > 1 ? `<small style="color: #94a3b8;">(x${qty})</small>` : ''}</span>
           </div>
           <div style="display: flex; align-items: center; gap: 0.65rem;">
-            <span class="poster-item-price">${currency} ${formatMoney(targetPrice)}</span>
+            <span class="poster-item-price">${formatMoney(targetPrice)}</span>
             ${statusBadge}
           </div>
         </div>

@@ -66,8 +66,13 @@ export default async function handler(req, res) {
 
   const payload = store.buildPublicPayload(data, isAdmin);
   const totals = payload.totals;
-  const currency = data.currency || "RM";
-  const money = v => h(`${currency} ${Number(v || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
+  // Same rule as formatMoney() in app.js: no currency prefix, and whole
+  // amounts drop ".00".
+  const money = v => {
+    const n = Math.round((Number(v) || 0) * 100) / 100;
+    const cents = Number.isInteger(n) ? 0 : 2;
+    return h(n.toLocaleString("en-US", { minimumFractionDigits: cents, maximumFractionDigits: cents }));
+  };
   const categories = data.expense_categories || ["Lain-lain"];
 
   const html = renderIndexHtml({

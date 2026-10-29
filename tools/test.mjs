@@ -86,6 +86,7 @@ assert.ok(!r.html.includes("AHMAD BIN ALI"), "anon page must not carry staff nam
 assert.ok(r.html.includes("Kutipan Pantry"));
 assert.ok(!r.html.includes("<?php"));
 assert.ok(r.html.includes('data-url="https://pantry.test/"'), "share links to the page itself");
+assert.ok(/id="statTotalCollected">[\d,]+</.test(r.html), "amounts show no RM and no .00");
 console.log("✓ anonymous page renders, no staff names");
 
 r = await call(api, { url: "/api.php?action=check_auth" });

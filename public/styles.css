@@ -1570,8 +1570,52 @@ body::after {
 
 /* Phones drop the row number; it only helps when scanning on a wide screen */
 @media (max-width: 599px) {
+  .data-table {
+    font-size: 0.72rem;
+  }
+  .data-table th,
+  .data-table td {
+    padding: 0.25rem 0.4rem;
+  }
   .data-table .col-idx {
     display: none;
+  }
+}
+
+/* Phones: smaller metric cards and amounts */
+@media (max-width: 599px) {
+  .metrics-grid {
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+  }
+  .stat-card {
+    padding: 1rem;
+  }
+  .stat-card-header {
+    margin-bottom: 0.4rem;
+  }
+  .stat-label {
+    font-size: 0.72rem;
+  }
+  .stat-icon-wrapper {
+    width: 30px;
+    height: 30px;
+    font-size: 0.9rem;
+  }
+  .stat-value {
+    font-size: 1.5rem;
+  }
+  .stat-subtext {
+    font-size: 0.72rem;
+  }
+  .item-collected-amount {
+    font-size: 1rem;
+  }
+  .item-target-amount {
+    font-size: 0.8rem;
+  }
+  .giver-coin-amount {
+    font-size: 0.7rem;
   }
 }
 
