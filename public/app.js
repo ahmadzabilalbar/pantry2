@@ -1122,9 +1122,6 @@ function renderAdminGiverReport(currency) {
            item.username.toLowerCase().includes(query);
   });
 
-  const visibleCount = document.getElementById("visibleGiversCount");
-  if (visibleCount) visibleCount.textContent = filtered.length;
-
   updateRestoreBackupButton();
 
   if (filtered.length === 0) {
@@ -1854,6 +1851,7 @@ function setupEventListeners() {
   // Open Add Amount Modal Buttons
   document.getElementById("btnOpenAddAmount").addEventListener("click", () => openAddAmountModal());
   document.getElementById("btnAdminAddAmount").addEventListener("click", () => openAddAmountModal());
+  document.getElementById("btnGiverAddContribution").addEventListener("click", () => openAddAmountModal());
 
   // Open Add Item Button
   document.getElementById("btnAdminAddItem").addEventListener("click", () => {
