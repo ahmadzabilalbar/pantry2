@@ -487,6 +487,9 @@ async function saveData() {
       showToast(result.error || "Gagal menyimpan data ke pangkalan data", "error");
       return false;
     }
+    // The bulk save returns no payload, so the server totals are now stale
+    // (items feed target_total). Drop them and let computeTotals() recompute.
+    delete state.data.totals;
     return true;
   } catch (err) {
     console.error("Failed saving through the API:", err);
