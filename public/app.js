@@ -1862,12 +1862,6 @@ function setupEventListeners() {
     urlInput.addEventListener("input", () => renderMediaManagerGrid());
   }
 
-  // Export Giver List to CSV Button
-  const btnExportCsv = document.getElementById("btnExportGiversCsv");
-  if (btnExportCsv) {
-    btnExportCsv.addEventListener("click", () => exportGiversCsv());
-  }
-
   // Global Open Add Expense Modal Helper
   window.openAddExpenseModal = function() {
     const form = document.getElementById("formAddExpense");
@@ -2598,63 +2592,6 @@ function sanitizeHtml(html) {
     .replace(/<\/?(?:iframe|object|embed|form|input|style|link|meta|base)\b[^>]*>/gi, "")
     .replace(/on\w+\s*=\s*(['"][^'"]*['"]|[^\s>]+)/gi, "")
     .replace(/(href|src|action|formaction)\s*=\s*(['"]\s*(?:javascript|data|vbscript):[^'"]*['"]|(?:javascript|data|vbscript):[^\s>]+)/gi, "");
-}
-
-// Export All Contribution Transactions to CSV
-function exportGiversCsv() {
-  const currency = state.data.currency || "RM";
-  const rawList = state.data.contributions || [];
-
-  if (rawList.length === 0) {
-    showToast("Tiada rekod transaksi untuk dieksport.", "warning");
-    return;
-  }
-
-  const sortOrder = state.giverSortOrder || "newest";
-
-  // Generate CSV Content with UTF-8 BOM for Excel support
-  let csvContent = "\uFEFF";
-  csvContent += `No,Nama Staf,ID Pengguna,Jumlah Disumbang (${currency}),Tarikh Sumbangan\n`;
-
-  // Sort list according to active sortOrder
-  const sortedForCsv = [...rawList].sort((a, b) => {
-    const parseTime = (dateStr) => {
-      const d = dateStr || "";
-      if (!d || d === "-") return 0;
-      const t = new Date(d.replace(/-/g, "/")).getTime();
-      return isNaN(t) ? 0 : t;
-    };
-    const timeA = parseTime(a.date || a.created_at);
-    const timeB = parseTime(b.date || b.created_at);
-
-    if (timeA !== timeB) {
-      return sortOrder === "oldest" ? timeA - timeB : timeB - timeA;
-    }
-    const idA = parseInt(a.id, 10) || 0;
-    const idB = parseInt(b.id, 10) || 0;
-    return sortOrder === "oldest" ? idA - idB : idB - idA;
-  });
-
-  // Write each individual transaction record
-  sortedForCsv.forEach((c, idx) => {
-    const nameStr = `"${(c.name || c.contributor || c.staff_name || "").replace(/"/g, '""')}"`;
-    const userStr = `"${(c.username || "").replace(/"/g, '""')}"`;
-    const amountStr = (parseFloat(c.amount) || 0).toFixed(2);
-    const dateStr = `"${formatDateTimeDisplay(c.date || c.created_at || "")}"`;
-    csvContent += `${idx + 1},${nameStr},${userStr},${amountStr},${dateStr}\n`;
-  });
-
-  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  const today = new Date().toISOString().split("T")[0];
-  link.setAttribute("href", url);
-  link.setAttribute("download", `rekod_transaksi_sumbangan_${today}.csv`);
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-
-  showToast(`Berjaya mengeksport ${rawList.length} rekod transaksi ke fail CSV!`, "success");
 }
 
 // ==========================================================================
