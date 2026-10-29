@@ -485,6 +485,40 @@ body::after {
   border-radius: var(--radius-md);
 }
 
+/* Phones: compact header */
+@media (max-width: 599px) {
+  .top-nav {
+    gap: 0.5rem;
+    padding: 0.6rem 0.75rem;
+    margin-bottom: 1.25rem;
+  }
+  .brand {
+    gap: 0.5rem;
+    min-width: 0;
+  }
+  .brand-icon {
+    width: 32px;
+    height: 32px;
+    font-size: 1rem;
+    border-radius: var(--radius-sm);
+    flex-shrink: 0;
+  }
+  .brand-title {
+    font-size: 1.05rem;
+    line-height: 1.2;
+  }
+  .nav-actions {
+    gap: 0.35rem;
+    flex-wrap: wrap;
+  }
+  .nav-actions .btn-icon {
+    width: 32px;
+    height: 32px;
+    font-size: 0.85rem;
+    border-radius: var(--radius-sm);
+  }
+}
+
 /* Top Info Grid (Announcement & Showcase Side by Side) */
 .top-info-grid {
   display: grid;

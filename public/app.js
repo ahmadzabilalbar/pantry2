@@ -904,17 +904,18 @@ function renderGiverCoins() {
 
   const currency = state.data.currency || "RM";
 
+  // Latest contribution first. giver_coins arrives oldest-first by date
+  // (buildPublicPayload in lib/store.js), so it is simply reversed.
   let coinsList = [];
   if (state.data.giver_coins && Array.isArray(state.data.giver_coins) && state.data.giver_coins.length > 0) {
-    coinsList = state.data.giver_coins.map(c => ({ amount: Number(c.amount) || 0 }));
+    coinsList = state.data.giver_coins.map(c => ({ amount: Number(c.amount) || 0 })).reverse();
   } else if (state.data.contributions && state.data.contributions.length > 0) {
+    const stamp = c => Date.parse(String(c.date || c.created_at || "").replace(" ", "T")) || 0;
     coinsList = state.data.contributions
       .filter(c => Number(c.amount) > 0)
+      .sort((a, b) => stamp(b) - stamp(a))
       .map(c => ({ amount: Number(c.amount) || 0 }));
   }
-
-  // Sort by highest contribution amount first
-  coinsList.sort((a, b) => b.amount - a.amount);
 
   if (coinsList.length === 0) {
     if (section) section.style.display = "none";
