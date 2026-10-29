@@ -745,7 +745,7 @@ function renderPublicExpenses(currency) {
       <td colspan="${colCount}">
         <div class="group-row-inner">
           <span>${escapeHtml(label)} <span class="group-row-count">${count} rekod</span></span>
-          <span>${formatMoney(sum)}</span>
+          <span>${formatMoney(sum, true)}</span>
         </div>
       </td>
     </tr>`;
@@ -759,7 +759,7 @@ function renderPublicExpenses(currency) {
         <button type="button" class="group-row-inner group-toggle" data-action="toggle-expense-month"
                 data-month="${escapeHtml(group.key)}" aria-expanded="${open}">
           <span><i class="fa-solid fa-chevron-right group-chevron"></i> ${escapeHtml(formatMonthLabel(group.key))} <span class="group-row-count">${group.items.length} rekod</span></span>
-          <span>${formatMoney(group.sum)}</span>
+          <span>${formatMoney(group.sum, true)}</span>
         </button>
       </td>
     </tr>`;
@@ -803,7 +803,7 @@ function renderPublicExpenses(currency) {
                     <span class="cell-sub"><span class="expense-cat-badge"><i class="fa-solid fa-tag"></i> ${cat}</span>${staffName ? ` Pembeli: ${staffName}` : ''}</span>
                     ${notes ? `<span class="cell-sub">${notes}</span>` : ''}
                   </td>
-                  <td class="col-num" style="color: #c084fc;">${formatMoney(amountVal)}</td>
+                  <td class="col-num" style="color: #c084fc;">${formatMoney(amountVal, true)}</td>
                   <td class="col-center">
                     ${receiptImg ? `
                       <a href="${receiptImg}" target="_blank" class="receipt-thumb-link" title="Lihat Resit Penuh">
@@ -829,7 +829,7 @@ function renderPublicExpenses(currency) {
             <tr>
               <td class="col-idx"></td>
               <td colspan="2" style="text-align: right;">Jumlah Perbelanjaan</td>
-              <td class="col-num" style="color: #c084fc;">${formatMoney(totalExpensesSum)}</td>
+              <td class="col-num" style="color: #c084fc;">${formatMoney(totalExpensesSum, true)}</td>
               <td colspan="${state.isAdmin ? 2 : 1}"></td>
             </tr>
           </tfoot>
@@ -937,9 +937,10 @@ function renderGiverCoins() {
 
 // Format Currency Helper: no currency prefix on the page; whole amounts drop
 // ".00" (50), others keep cents (12.50). Mirrors money() in api/page.js.
-function formatMoney(num) {
+// alwaysCents keeps ".00" too (the tables, where amounts line up).
+function formatMoney(num, alwaysCents = false) {
   const n = Math.round((parseFloat(num) || 0) * 100) / 100;
-  const cents = Number.isInteger(n) ? 0 : 2;
+  const cents = alwaysCents || !Number.isInteger(n) ? 2 : 0;
   return n.toLocaleString("en-US", {
     minimumFractionDigits: cents,
     maximumFractionDigits: cents
@@ -1176,7 +1177,7 @@ function renderAdminGiverReport(currency) {
           ${escapeHtml(item.name)}
           ${item.note ? `<span class="cell-sub">${escapeHtml(item.note)}</span>` : ''}
         </td>
-        <td class="col-num" style="color: #6ee7b7;">${formatMoney(item.amount)}</td>
+        <td class="col-num" style="color: #6ee7b7;">${formatMoney(item.amount, true)}</td>
         <td class="col-date">${formatDateTimeDisplay(item.date)}</td>
         <td class="col-actions">
           <button type="button" class="btn btn-danger-soft btn-icon" data-action="delete-contribution"
