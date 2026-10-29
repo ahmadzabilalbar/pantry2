@@ -869,22 +869,6 @@ body::after {
   border-color: #f59e0b;
 }
 
-.giver-coin-icon {
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #fef08a 0%, #f59e0b 50%, #d97706 100%);
-  color: #78350f;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.65rem;
-  font-weight: 900;
-  box-shadow: 0 1px 4px rgba(217, 119, 6, 0.5);
-  flex-shrink: 0;
-  animation: coinIconRotate 5s ease-in-out infinite;
-}
-
 @keyframes coinFloat {
   0%, 100% {
     transform: translateY(0);
@@ -900,15 +884,6 @@ body::after {
   }
   50% {
     box-shadow: 0 4px 14px rgba(245, 158, 11, 0.32), inset 0 1px 0 rgba(255, 255, 255, 0.3);
-  }
-}
-
-@keyframes coinIconRotate {
-  0%, 100% {
-    transform: scale(1) rotate(0deg);
-  }
-  50% {
-    transform: scale(1.08) rotate(6deg);
   }
 }
 

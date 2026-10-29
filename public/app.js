@@ -928,9 +928,6 @@ function renderGiverCoins() {
     const amountVal = Number(g.amount) || 0;
     return `
       <div class="giver-coin-chip" title="${formatMoney(amountVal)}">
-        <div class="giver-coin-icon">
-          <i class="fa-solid fa-coins"></i>
-        </div>
         <span class="giver-coin-amount">${formatMoney(amountVal)}</span>
       </div>
     `;
