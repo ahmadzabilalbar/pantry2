@@ -2344,15 +2344,38 @@ select.form-control option:checked {
    visibility. Elements keep whatever display their own rules give them; this
    only hides them for everyone else.
    ========================================================================== */
+/* Giver report and staff directory: one scroll height for both tables */
+.admin-scroll {
+  max-height: 640px;
+  overflow-y: auto;
+}
+
 /* Wide desktop: giver report and staff directory in two columns. Auto
-   columns, so if one section is hidden the other takes the full width. */
+   columns, so if one section is hidden the other takes the full width.
+   Both cards are the same fixed height and the table scrolls inside it,
+   so their bottoms line up whatever the toolbars above them hold. */
 @media (min-width: 1200px) {
   .admin-two-col {
     display: grid;
     grid-auto-flow: column;
     grid-auto-columns: minmax(0, 1fr);
     gap: 1.5rem;
-    align-items: start;
+  }
+  .admin-two-col > .table-section {
+    display: flex;
+    flex-direction: column;
+    height: min(80vh, 820px);
+  }
+  .admin-two-col .table-card {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  .admin-two-col .admin-scroll {
+    flex: 1;
+    min-height: 0;
+    max-height: none;
   }
 }
 
