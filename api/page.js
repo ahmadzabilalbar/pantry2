@@ -1,5 +1,6 @@
 /**
- * The dashboard (/) and the public report (/laporan) - port of index.php.
+ * The dashboard (/) - port of index.php. It is also the page the WhatsApp share
+ * links to; the old /laporan report redirects here (vercel.json).
  *
  * Server-renders the metrics and admin state for a fast first paint and
  * inlines the privacy-filtered dataset as window.INITIAL_DATA, so a normal
@@ -11,7 +12,6 @@ import {
 import { sendHtml, jsonForScript, h, origin } from "../lib/http.js";
 import * as store from "../lib/store.js";
 import { renderIndexHtml } from "../lib/indexPage.js";
-import { renderReport } from "../lib/report.js";
 
 // Cache buster for app.js / styles.css: changes on every deployment.
 const VERSION = (process.env.VERCEL_GIT_COMMIT_SHA || process.env.VERCEL_DEPLOYMENT_ID || "dev").slice(0, 12);
@@ -64,17 +64,6 @@ export default async function handler(req, res) {
     console.error("page: data load failed:", e.message);
   }
 
-  const reportUrl = `${origin(req)}/laporan`;
-  const view = String(req.query?.view ?? "");
-  if (view === "laporan") {
-    return sendHtml(res, 200, renderReport(store.buildPublicPayload(data, false), {
-      showHidden: isAdmin,
-      nonce,
-      version: VERSION,
-      url: reportUrl
-    }));
-  }
-
   const payload = store.buildPublicPayload(data, isAdmin);
   const totals = payload.totals;
   const currency = data.currency || "RM";
@@ -103,7 +92,7 @@ export default async function handler(req, res) {
     contributionCount: (data.contributions || []).length,
     today: store.todayLocal(),
     posterFooter: data.poster_footer || store.formatPantryTitle(data.title),
-    reportUrl,
+    shareUrl: `${origin(req)}/`,
     categoryOptions: categories
       .map(c => `              <option value="${h(c)}"${c === "Lain-lain" ? " selected" : ""}>${h(c)}</option>`)
       .join("\n"),

@@ -1,6 +1,6 @@
 # Pantry 2 — Vercel + Google Sheets
 
-Live: <https://pantry-aras2.vercel.app/> (report: <https://pantry-aras2.vercel.app/laporan>)
+Live: <https://pantry-aras2.vercel.app/>
 
 The staff pantry fund tracker, moved off XAMPP/MySQL:
 
@@ -198,7 +198,7 @@ Don't type formulas into data cells.
 
 ```
 browser ──► Vercel edge
-             ├─ /, /laporan          ─► api/page.js    (server-rendered page / report)
+             ├─ /                    ─► api/page.js    (server-rendered page; /laporan redirects here)
              ├─ /api.php?action=...  ─► api/pantry.js  (JSON API, same routes as before)
              ├─ /auth/google[/callback] ─► api/auth.js (Google sign-in redirects)
              └─ /app.js, /styles.css, /vendor/…  (static, public/)

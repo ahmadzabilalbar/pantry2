@@ -1,7 +1,7 @@
 /**
  * Local preview on fake data - no Google project, Vercel account or Blob store
- * needed. Mimics vercel.json's routing: public/ as static files, "/" and
- * "/laporan" to api/page.js, "/api.php" to api/pantry.js, "/auth/google*" to
+ * needed. Mimics vercel.json's routing: public/ as static files, "/" to
+ * api/page.js (and "/laporan" redirected to "/"), "/api.php" to api/pantry.js, "/auth/google*" to
  * api/auth.js. Google's consent page is skipped: "Log Masuk dengan Google"
  * comes straight back signed in as the fake admin.
  *
@@ -66,7 +66,7 @@ http.createServer(async (req, res) => {
   req.query = Object.fromEntries(url.searchParams);
   try {
     if (url.pathname === "/" || url.pathname === "/index.php") return await page(req, res);
-    if (url.pathname === "/laporan") { req.query.view = "laporan"; return await page(req, res); }
+    if (url.pathname === "/laporan") { res.writeHead(308, { Location: "/" }); return res.end(); }
     if (url.pathname === "/api.php") return await api(req, res);
     if (url.pathname === "/auth/google") {
       req.query.step = "start";

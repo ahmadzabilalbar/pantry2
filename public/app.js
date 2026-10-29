@@ -1231,8 +1231,7 @@ window.restoreContributionsFromBackup = async function() {
 };
 
 // Open WhatsApp with a short summary of the latest totals plus the link to the
-// published report page. Only public figures go in the message (the same ones
-// the public report shows), never any giver name.
+// page. Only public figures go in the message, never any giver name.
 function shareReportToWhatsapp(url) {
   if (!url) return;
   const currency = state.data.currency || "RM";
@@ -1244,7 +1243,7 @@ function shareReportToWhatsapp(url) {
   lines.push(`\u{1F3E6} Baki: ${currency} ${formatMoney(t.baki)}`);
   if (t.has_target) lines.push(`\u{1F3AF} Sasaran: ${currency} ${formatMoney(t.target_total)} (${t.percent_complete}%)`);
   lines.push("");
-  lines.push("\u{1F4C4} Lihat laporan penuh:", url);
+  lines.push("\u{1F4C4} Lihat butiran penuh:", url);
 
   // api.whatsapp.com directly: the wa.me redirect mangles 4-byte emoji into "?".
   const waUrl = "https://api.whatsapp.com/send?text=" + encodeURIComponent(lines.join("\n"));

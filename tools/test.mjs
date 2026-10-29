@@ -85,7 +85,7 @@ assert.ok(r.html.includes("window.INITIAL_DATA"), "bootstrap present");
 assert.ok(!r.html.includes("AHMAD BIN ALI"), "anon page must not carry staff names");
 assert.ok(r.html.includes("Kutipan Pantry"));
 assert.ok(!r.html.includes("<?php"));
-assert.ok(r.html.includes('href="https://pantry.test/laporan"') || r.html.includes('data-url="https://pantry.test/laporan"'));
+assert.ok(r.html.includes('data-url="https://pantry.test/"'), "share links to the page itself");
 console.log("✓ anonymous page renders, no staff names");
 
 r = await call(api, { url: "/api.php?action=check_auth" });
@@ -202,15 +202,10 @@ r = await call(api, { method: "POST", url: "/api.php?action=upload_image", body:
 assert.equal(r.status, 400);
 console.log("✓ upload sniffing rejects non-image bytes");
 
-// admin page includes staff; report is public-only
+// admin page includes staff
 r = await call(page);
 assert.ok(r.html.includes("SITI BINTI ABU BAKAR"), "admin page carries staff");
 assert.ok(r.html.includes('class="is-admin"'));
-r = await call(page, { url: "/api/page?view=laporan" });
-assert.ok(r.html.includes("Laporan"));
-assert.ok(!r.html.includes("SITI BINTI ABU"), "report never shows giver names");
-assert.ok(r.html.includes("SITI") === true, "purchaser given name shown");
-assert.ok(r.html.includes("RM 15.00"));
 
 // public payload after logout
 r = await post("logout", {}, csrf);

@@ -13,13 +13,9 @@ tracker. Setup is in `README.md`.
      for a fast first paint, and inlines the privacy-filtered dataset as
      `window.INITIAL_DATA`, so a normal load makes zero API calls. The markup
      is in `lib/indexPage.js`.
-   - `/laporan` is the **public** printable report (`lib/report.js`). It is
-     always fed `buildPublicPayload(data, false)` and shows only:
-     - totals and expenses;
-     - the anonymised giver-coin amounts (honouring the `coins` toggle);
-     - the public QR card.
-
-     Never add giver names, or anything that links an amount to a giver.
+   - There is no separate report page. `/laporan` (the old printable
+     report) is a permanent redirect to `/` in `vercel.json`, so links
+     already shared keep working. The WhatsApp share button links to `/`.
    - `api/pantry.js` is the JSON API at `/api.php?action=...` (the old URL, so
      `app.js` didn't change). It handles session checks, logout, uploads and
      every write.
