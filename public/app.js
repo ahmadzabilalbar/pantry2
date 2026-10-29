@@ -1140,16 +1140,12 @@ function renderAdminGiverReport(currency) {
 
   const sortOrder = state.giverSortOrder || "newest";
 
-  // Update header sort icon and selector dropdown value
+  // Update header sort icon
   const sortIcon = document.getElementById("sortIconGiverDate");
   if (sortIcon) {
     sortIcon.className = sortOrder === "oldest"
       ? "fa-solid fa-arrow-up-short-wide"
       : "fa-solid fa-arrow-down-short-wide";
-  }
-  const dateSortSelect = document.getElementById("giverDateSortSelect");
-  if (dateSortSelect && dateSortSelect.value !== sortOrder) {
-    dateSortSelect.value = sortOrder;
   }
 
   // Display transactions sorted by date (newest vs oldest)
@@ -2079,16 +2075,6 @@ function setupEventListeners() {
   if (giverSearch) {
     giverSearch.addEventListener("input", (e) => {
       state.giverSearchQuery = e.target.value;
-      renderAdminGiverReport(state.data.currency || "RM");
-    });
-  }
-
-  // Giver Date Sort Dropdown Listener
-  const giverDateSortSelect = document.getElementById("giverDateSortSelect");
-  if (giverDateSortSelect) {
-    giverDateSortSelect.value = state.giverSortOrder || "newest";
-    giverDateSortSelect.addEventListener("change", (e) => {
-      state.giverSortOrder = e.target.value;
       renderAdminGiverReport(state.data.currency || "RM");
     });
   }
