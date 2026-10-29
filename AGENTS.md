@@ -114,11 +114,12 @@ These carry over fixes from the MySQL version. Do not undo them.
   route handles settings, announcement, showcase and items only. Items are
   upserted by id and `created_at` is carried over.
 - **`contributions` and `expenses` are row-level**: append, update or delete
-  one row (`addContribution`, `deleteContribution`, `addExpense`,
-  `updateExpense`, `deleteExpense`). `SERVER_DERIVED_KEYS` in `app.js` strips
+  one row (`addContribution`, `updateContribution`, `deleteContribution`,
+  `addExpense`, `updateExpense`, `deleteExpense`). `SERVER_DERIVED_KEYS` in `app.js` strips
   both from the bulk payload; keep them there.
-- **A contribution and its backup row are written in one `batchUpdate`**, so
-  the two tabs cannot drift.
+- **A contribution and its backup row are written in one call** (`batchUpdate`
+  for add/delete, one `values:batchUpdate` for an edit), so the two tabs
+  cannot drift.
 - **A GET must never write.** Restoring the ledger is the explicit admin
   action `restore_contributions`.
 - **There is one collection event.** Only its title and description are

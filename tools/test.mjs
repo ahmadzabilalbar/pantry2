@@ -148,11 +148,22 @@ assert.equal(sheets.contributions_backup.rows.length, 2, "backup row written");
 await post("add_contribution", { name: "SITI BINTI ABU", amount: 25.5 }, csrf);
 r = await post("add_contribution", { name: "x", amount: 5, date: "bad" }, csrf);
 assert.equal(r.status, 400);
+r = await post("edit_contribution", { contribution_id: cid, name: "AHMAD BIN ALI", username: "1234", amount: 60, date: "2026-09-30T08:15" }, csrf);
+assert.equal(r.status, 200, JSON.stringify(r.json));
+const edited = r.json.data.contributions.find(c => c.id === cid);
+assert.equal(edited.amount, 60);
+assert.equal(edited.date, "2026-09-30 08:15");
+const amountCol = sheets.contributions_backup.rows[0].indexOf("amount");
+assert.ok(sheets.contributions_backup.rows.some(row => Number(row[amountCol]) === 60), "backup row updated");
+r = await post("edit_contribution", { contribution_id: 999, name: "x", amount: 5 }, csrf);
+assert.equal(r.status, 404);
+r = await post("edit_contribution", { contribution_id: cid, name: "", amount: 5 }, csrf);
+assert.equal(r.status, 400);
 r = await post("delete_contribution", { contribution_id: cid }, csrf);
 assert.equal(r.status, 200);
 assert.equal(r.json.data.contributions.length, 1);
 assert.equal(sheets.contributions_backup.rows.length, 2, "matching backup removed");
-console.log("✓ contributions add/delete keep backup in step");
+console.log("✓ contributions add/edit/delete keep backup in step");
 
 // expenses
 r = await post("add_expense", { title: "Sabun", amount: 12.3, date: "2026-10-02", staff_name: "SITI BINTI ABU" }, csrf);

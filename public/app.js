@@ -1218,6 +1218,10 @@ function renderAdminGiverReport(currency) {
         <td class="col-num" style="color: #6ee7b7;">${formatMoney(item.amount, true)}</td>
         <td class="col-date">${formatDateTimeDisplay(item.date)}</td>
         <td class="col-actions">
+          <button type="button" class="btn btn-secondary btn-icon" data-action="edit-contribution"
+                  data-id="${escapeHtml(String(item.id))}" title="Kemaskini rekod sumbangan ini">
+            <i class="fa-solid fa-pen-to-square"></i>
+          </button>
           <button type="button" class="btn btn-danger-soft btn-icon" data-action="delete-contribution"
                   data-id="${escapeHtml(String(item.id))}" data-name="${escapeHtml(item.name)}"
                   title="Padam rekod sumbangan ini">
@@ -1227,6 +1231,48 @@ function renderAdminGiverReport(currency) {
       </tr>
     `;
   }).join('')).join('')).join('');
+}
+
+// The add-contribution modal doubles as the edit form; editContributionId
+// says which. Opening it for a new record clears anything left by an edit.
+function setAddAmountMode(contribution) {
+  const editing = Boolean(contribution);
+  document.getElementById("editContributionId").value = editing ? String(contribution.id) : "";
+  document.getElementById("addAmountTitle").textContent = editing ? "Kemaskini Rekod Sumbangan" : "Tambah Jumlah Kutipan";
+  document.getElementById("addAmountSubmitLabel").textContent = editing ? "Simpan Perubahan" : "Tambah ke Jumlah";
+}
+
+function openAddAmountModal() {
+  if (document.getElementById("editContributionId").value) {
+    document.getElementById("formAddAmount").reset();
+    populateStaffDropdown();
+    setDefaultDate();
+  }
+  setAddAmountMode(null);
+  openModal("modalAddAmount");
+}
+
+function openEditContributionModal(id) {
+  const c = (state.data.contributions || []).find(x => String(x.id) === String(id));
+  if (!c) {
+    showToast("Rekod sumbangan tidak dijumpai", "error");
+    return;
+  }
+  document.getElementById("formAddAmount").reset();
+  populateStaffDropdown();
+  setAddAmountMode(c);
+
+  // A name in the staff directory goes in the dropdown, anything else in the free-text box
+  const name = c.name || "";
+  const select = document.getElementById("selectStaffName");
+  const isStaff = state.staffList.some(s => s.name === name);
+  select.value = isStaff ? name : "";
+  document.getElementById("inputCustomGiverName").value = isStaff ? "" : name;
+
+  document.getElementById("inputCollectionAmount").value = parseFloat(c.amount) || "";
+  const m = /^(\d{4}-\d{2}-\d{2})(?:[ T](\d{2}:\d{2}))?/.exec(c.date || c.created_at || "");
+  if (m) document.getElementById("inputCollectionDate").value = `${m[1]}T${m[2] || "00:00"}`;
+  openModal("modalAddAmount");
 }
 
 // Delete one contribution. The README has advertised this since the start but
@@ -1485,6 +1531,7 @@ function populateSectionVisibilityModal() {
 // executable attributes. Buttons declare data-action/data-id instead and are
 // dispatched from a single listener on document.
 const DELEGATED_ACTIONS = {
+  "edit-contribution": el => openEditContributionModal(el.dataset.id),
   "delete-contribution": el => deleteContribution(el.dataset.id, el.dataset.name || ""),
   "restore-contributions": () => restoreContributionsFromBackup(),
   "share-report-whatsapp": el => shareReportToWhatsapp(el.dataset.url),
@@ -1809,8 +1856,8 @@ function setupEventListeners() {
   }
 
   // Open Add Amount Modal Buttons
-  document.getElementById("btnOpenAddAmount").addEventListener("click", () => openModal("modalAddAmount"));
-  document.getElementById("btnAdminAddAmount").addEventListener("click", () => openModal("modalAddAmount"));
+  document.getElementById("btnOpenAddAmount").addEventListener("click", () => openAddAmountModal());
+  document.getElementById("btnAdminAddAmount").addEventListener("click", () => openAddAmountModal());
 
   // Open Add Item Button
   document.getElementById("btnAdminAddItem").addEventListener("click", () => {
@@ -2111,18 +2158,17 @@ function setupEventListeners() {
     const selectedStaff = state.staffList.find(s => s.name === finalGiverName);
     const username = (selectedStaff && selectedStaff.username) ? selectedStaff.username : finalGiverName.toLowerCase().replace(/[^a-z0-9]/g, '');
 
-    // One row, one INSERT. This used to splice the record into the local array
-    // and POST the entire ledger back, which rewrote every contribution row.
-    const { ok, body: result } = await apiPost("api.php?action=add_contribution", {
-      name: finalGiverName,
-      username: username || "guest",
-      amount: amount,
-      date: date,
-      status: "paid"
-    });
+    // One row, one INSERT (or one UPDATE when editing). This used to splice the
+    // record into the local array and POST the entire ledger back, which
+    // rewrote every contribution row.
+    const editId = document.getElementById("editContributionId").value;
+    const fields = { name: finalGiverName, username: username || "guest", amount: amount, date: date };
+    const { ok, body: result } = editId
+      ? await apiPost("api.php?action=edit_contribution", { contribution_id: editId, ...fields })
+      : await apiPost("api.php?action=add_contribution", { ...fields, status: "paid" });
 
     if (!ok || !result.success) {
-      showToast(result.error || "Gagal merekodkan sumbangan", "error");
+      showToast(result.error || (editId ? "Gagal mengemas kini rekod sumbangan" : "Gagal merekodkan sumbangan"), "error");
       return;
     }
 
@@ -2135,10 +2181,14 @@ function setupEventListeners() {
 
     closeModal("modalAddAmount");
     document.getElementById("formAddAmount").reset();
+    populateStaffDropdown();
+    setAddAmountMode(null);
     setDefaultDate();
 
     const currency = state.data.currency || "RM";
-    showToast(`Merekodkan sumbangan ${currency} ${formatMoney(amount)} daripada ${finalGiverName}!`, "success");
+    showToast(editId
+      ? `Rekod sumbangan ${finalGiverName} berjaya dikemas kini`
+      : `Merekodkan sumbangan ${currency} ${formatMoney(amount)} daripada ${finalGiverName}!`, "success");
   });
 
   // Save Item Form Submit

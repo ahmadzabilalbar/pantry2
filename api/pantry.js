@@ -100,23 +100,20 @@ const POST_ROUTES = {
   },
 
   async add_contribution(body) {
-    const name = String(body.name ?? "").trim();
-    const amount = parseFloat(body.amount) || 0;
-    if (name === "" || amount <= 0) fail(400, "Nama penyumbang dan jumlah (> 0) diperlukan");
-    const date = String(body.date ?? "").trim();
-    if (date !== "" && !/^\d{4}-\d{2}-\d{2}([ T]\d{2}:\d{2}(:\d{2})?)?$/.test(date)) {
-      fail(400, "Format tarikh sumbangan tidak sah");
-    }
     const id = await store.addContribution({
-      name,
-      username: body.username,
-      amount,
-      date: date.replace("T", " "),
+      ...contributionFields(body),
       status: body.status,
       note: body.note
     });
     if (!id) fail(500, "Gagal merekodkan sumbangan");
     return { success: true, id, message: "Sumbangan berjaya direkodkan!", data: await freshPayload() };
+  },
+
+  async edit_contribution(body) {
+    const id = parseInt(body.contribution_id ?? body.id, 10) || 0;
+    if (id <= 0) fail(400, "ID sumbangan tidak sah");
+    if (!await store.updateContribution(id, contributionFields(body))) fail(404, "Rekod sumbangan tidak dijumpai");
+    return { success: true, message: "Rekod sumbangan berjaya dikemas kini!", data: await freshPayload() };
   },
 
   async delete_contribution(body) {
@@ -171,6 +168,17 @@ const POST_ROUTES = {
   }
 };
 POST_ROUTES.update_expense = POST_ROUTES.edit_expense;
+
+function contributionFields(body) {
+  const name = String(body.name ?? "").trim();
+  const amount = parseFloat(body.amount) || 0;
+  if (name === "" || amount <= 0) fail(400, "Nama penyumbang dan jumlah (> 0) diperlukan");
+  const date = String(body.date ?? "").trim();
+  if (date !== "" && !/^\d{4}-\d{2}-\d{2}([ T]\d{2}:\d{2}(:\d{2})?)?$/.test(date)) {
+    fail(400, "Format tarikh sumbangan tidak sah");
+  }
+  return { name, username: body.username, amount, date: date.replace("T", " ") };
+}
 
 function expenseFields(body) {
   const title = String(body.title ?? "").trim();
