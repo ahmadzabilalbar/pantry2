@@ -1543,6 +1543,17 @@ body::after {
   background: rgba(192, 132, 252, 0.06);
   padding-left: 1rem;
 }
+/* Giver report: same groups in the contribution green */
+.data-table.groups-success .year-row td,
+.data-table.groups-success .month-row td {
+  color: #6ee7b7;
+}
+.data-table.groups-success .year-row td {
+  background: rgba(110, 231, 183, 0.14);
+}
+.data-table.groups-success .month-row td {
+  background: rgba(110, 231, 183, 0.05);
+}
 .data-table .group-row-inner {
   display: flex;
   justify-content: space-between;
@@ -2333,6 +2344,18 @@ select.form-control option:checked {
    visibility. Elements keep whatever display their own rules give them; this
    only hides them for everyone else.
    ========================================================================== */
+/* Wide desktop: giver report and staff directory in two columns. Auto
+   columns, so if one section is hidden the other takes the full width. */
+@media (min-width: 1200px) {
+  .admin-two-col {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
+    gap: 1.5rem;
+    align-items: start;
+  }
+}
+
 body:not(.is-admin) .admin-only {
   display: none !important;
 }

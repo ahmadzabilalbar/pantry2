@@ -8,6 +8,7 @@
 const state = {
   // Expense months shown expanded; starts with the current month only
   openExpenseMonths: new Set([currentMonthKey()]),
+  openGiverMonths: new Set([currentMonthKey()]),
   data: {
     currency: "RM",
     title: "Pantry Aras 2",
@@ -681,11 +682,11 @@ function currentMonthKey() {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 }
 
-// Open/close one month in the expenses table without re-rendering it
-function toggleExpenseMonth(btn) {
+// Open/close one month in a grouped table without re-rendering it
+function toggleMonthGroup(btn, openSet) {
   const key = btn.dataset.month;
-  const open = !state.openExpenseMonths.has(key);
-  if (open) state.openExpenseMonths.add(key); else state.openExpenseMonths.delete(key);
+  const open = !openSet.has(key);
+  if (open) openSet.add(key); else openSet.delete(key);
   btn.setAttribute("aria-expanded", String(open));
   btn.closest("tbody").querySelectorAll("tr[data-month]").forEach(tr => {
     if (tr.dataset.month === key) tr.hidden = !open;
@@ -1152,26 +1153,63 @@ function renderAdminGiverReport(currency) {
   }
 
   // Display transactions sorted by date (newest vs oldest)
-  const displayList = [...filtered].sort((a, b) => {
-    const parseTime = (dateStr) => {
-      if (!dateStr || dateStr === "-") return 0;
-      const t = new Date(dateStr.replace(/-/g, "/")).getTime();
-      return isNaN(t) ? 0 : t;
-    };
-    const timeA = parseTime(a.date);
-    const timeB = parseTime(b.date);
-
-    if (timeA !== timeB) {
-      return sortOrder === "oldest" ? timeA - timeB : timeB - timeA;
+  const parseTime = (dateStr) => {
+    if (!dateStr || dateStr === "-") return 0;
+    const t = new Date(dateStr.replace(/-/g, "/")).getTime();
+    return isNaN(t) ? 0 : t;
+  };
+  const displayList = filtered.map(item => ({ ...item, time: parseTime(item.date) })).sort((a, b) => {
+    if (a.time !== b.time) {
+      return sortOrder === "oldest" ? a.time - b.time : b.time - a.time;
     }
     const idA = parseInt(a.id, 10) || 0;
     const idB = parseInt(b.id, 10) || 0;
     return sortOrder === "oldest" ? idA - idB : idB - idA;
   });
 
-  tbody.innerHTML = displayList.map((item, index) => {
+  // Grouped by year, then month, in the chosen order
+  const years = [];
+  for (const item of displayList) {
+    const d = item.time ? new Date(item.time) : null;
+    const key = d ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}` : "";
+    let year = years[years.length - 1];
+    if (!year || year.key !== key.slice(0, 4)) years.push(year = { key: key.slice(0, 4), months: [], sum: 0, count: 0 });
+    let month = year.months[year.months.length - 1];
+    if (!month || month.key !== key) year.months.push(month = { key, items: [], sum: 0 });
+    month.items.push(item);
+    month.sum += item.amount;
+    year.sum += item.amount;
+    year.count++;
+  }
+
+  // A search shows every match, so all months open while one is typed
+  const isOpen = key => !key || query !== "" || state.openGiverMonths.has(key);
+  const yearRow = (year) => `
+    <tr class="year-row">
+      <td colspan="5">
+        <div class="group-row-inner">
+          <span>${escapeHtml(year.key ? `Tahun ${year.key}` : "Tiada Tarikh")} <span class="group-row-count">${year.count} rekod</span></span>
+          <span>${formatMoney(year.sum, true)}</span>
+        </div>
+      </td>
+    </tr>`;
+  const monthRow = (group) => `
+    <tr class="month-row">
+      <td colspan="5">
+        <button type="button" class="group-row-inner group-toggle" data-action="toggle-giver-month"
+                data-month="${escapeHtml(group.key)}" aria-expanded="${isOpen(group.key)}">
+          <span><i class="fa-solid fa-chevron-right group-chevron"></i> ${escapeHtml(formatMonthLabel(group.key))} <span class="group-row-count">${group.items.length} rekod</span></span>
+          <span>${formatMoney(group.sum, true)}</span>
+        </button>
+      </td>
+    </tr>`;
+
+  let rowNo = 0;
+  tbody.innerHTML = years.map(year => yearRow(year) + year.months.map(group =>
+    (year.key ? monthRow(group) : "") + group.items.map(item => {
+    const index = rowNo++;
     return `
-      <tr>
+      <tr data-month="${escapeHtml(group.key)}"${isOpen(group.key) ? "" : " hidden"}>
         <td class="col-idx">${index + 1}</td>
         <td class="col-main">
           ${escapeHtml(item.name)}
@@ -1188,7 +1226,7 @@ function renderAdminGiverReport(currency) {
         </td>
       </tr>
     `;
-  }).join('');
+  }).join('')).join('')).join('');
 }
 
 // Delete one contribution. The README has advertised this since the start but
@@ -1460,7 +1498,8 @@ const DELEGATED_ACTIONS = {
   "delete-staff": el => confirmDeleteStaff(el.dataset.id),
   "open-add-expense": () => openAddExpenseModal(),
   "manage-expense-categories": () => manageExpenseCategories(),
-  "toggle-expense-month": el => toggleExpenseMonth(el),
+  "toggle-expense-month": el => toggleMonthGroup(el, state.openExpenseMonths),
+  "toggle-giver-month": el => toggleMonthGroup(el, state.openGiverMonths),
   "edit-event": el => openEditEventModal(parseInt(el.dataset.id, 10)),
   "remove-media": el => removeMediaImage(parseInt(el.dataset.index, 10)),
   "slide-prev": el => slideItemImage(el.dataset.id, -1),
