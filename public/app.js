@@ -774,7 +774,7 @@ function renderPublicExpenses(currency) {
               <th class="col-idx">#</th>
               <th>Tarikh</th>
               <th>Perbelanjaan</th>
-              <th class="col-num">Jumlah</th>
+              <th class="col-num">Jumlah (${escapeHtml(currency)})</th>
               <th class="col-center">Resit</th>
               ${state.isAdmin ? `<th class="col-actions">Tindakan</th>` : ''}
             </tr>
