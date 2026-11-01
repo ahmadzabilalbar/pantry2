@@ -1110,7 +1110,8 @@ function renderAdminGiverReport(currency) {
       username: c.username || "",
       amount: parseFloat(c.amount) || 0,
       date: c.date || (c.created_at ? c.created_at.substring(0, 16) : "-"),
-      note: c.note || ""
+      note: c.note || "",
+      verified: c.verified === true
     };
   });
 
@@ -1214,6 +1215,10 @@ function renderAdminGiverReport(currency) {
         <td class="col-num" style="color: #6ee7b7;">${formatMoney(item.amount, true)}</td>
         <td class="col-date">${formatDateTimeDisplay(item.date)}</td>
         <td class="col-actions">
+          <input type="checkbox" class="bank-check" data-action="verify-contribution"
+                 data-id="${escapeHtml(String(item.id))}"${item.verified ? " checked" : ""}
+                 title="${item.verified ? "Sudah disemak dengan bank" : "Tandakan sudah disemak dengan bank"}"
+                 aria-label="Sudah disemak dengan bank">
           <button type="button" class="btn btn-secondary btn-icon" data-action="edit-contribution"
                   data-id="${escapeHtml(String(item.id))}" title="Kemaskini rekod sumbangan ini">
             <i class="fa-solid fa-pen-to-square"></i>
@@ -1269,6 +1274,25 @@ function openEditContributionModal(id) {
   const m = /^(\d{4}-\d{2}-\d{2})(?:[ T](\d{2}:\d{2}))?/.exec(c.date || c.created_at || "");
   if (m) document.getElementById("inputCollectionDate").value = `${m[1]}T${m[2] || "00:00"}`;
   openModal("modalAddAmount");
+}
+
+// Tick "checked against the bank". The delegated click handler cancels the
+// native toggle, so the box shows the new state once it is in state.data:
+// set at once, rolled back if the save fails.
+async function setContributionVerified(id, verified) {
+  const c = (state.data.contributions || []).find(x => String(x.id) === String(id));
+  if (!c) return;
+  c.verified = verified;
+  renderAdminGiverReport(state.data.currency || "RM");
+
+  const { ok, body: result } = await apiPost("api.php?action=verify_contribution", { contribution_id: id, verified });
+  if (!ok || !result.success) {
+    c.verified = !verified;
+    renderAdminGiverReport(state.data.currency || "RM");
+    showToast(result.error || "Gagal menyimpan tanda semakan bank", "error");
+    return;
+  }
+  if (result.data) state.data = result.data;
 }
 
 // Delete one contribution. The README has advertised this since the start but
@@ -1528,6 +1552,7 @@ function populateSectionVisibilityModal() {
 // dispatched from a single listener on document.
 const DELEGATED_ACTIONS = {
   "edit-contribution": el => openEditContributionModal(el.dataset.id),
+  "verify-contribution": el => setContributionVerified(el.dataset.id, el.checked),
   "delete-contribution": el => deleteContribution(el.dataset.id, el.dataset.name || ""),
   "restore-contributions": () => restoreContributionsFromBackup(),
   "share-report-whatsapp": el => shareReportToWhatsapp(el.dataset.url),

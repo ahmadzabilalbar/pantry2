@@ -1,11 +1,12 @@
 /**
  * Create the tabs and header rows in an empty Google Sheet, and seed the
- * single collection event. Safe to re-run: existing tabs are left alone.
+ * single collection event. Safe to re-run: existing tabs keep their data and
+ * only gain any header TABLES lists that they lack.
  *
  *   npm run sheet:init
  */
 import { TABLES, newId, nowLocal } from "../lib/store.js";
-import { a1, getMeta, batchUpdate, getValues, writeRanges } from "../lib/sheets.js";
+import { a1, colLetter, getMeta, batchUpdate, getValues, writeRanges } from "../lib/sheets.js";
 
 const meta = await getMeta();
 const existing = new Set((meta.sheets || []).map(s => s.properties.title));
@@ -22,8 +23,15 @@ const tabs = Object.keys(TABLES);
 const headers = await getValues(tabs.map(t => a1(t, "1:1")));
 const writes = [];
 tabs.forEach((t, i) => {
-  if (!(headers[i][0] || []).length) {
+  const header = (headers[i][0] || []).map(h => String(h ?? "").trim());
+  if (!header.length) {
     writes.push({ range: a1(t, "A1"), values: [TABLES[t]] });
+    return;
+  }
+  // A column added to TABLES later goes after the existing headers.
+  const missing = TABLES[t].filter(c => !header.includes(c));
+  if (missing.length) {
+    writes.push({ range: a1(t, `${colLetter(header.length + 1)}1`), values: [missing] });
   }
 });
 await writeRanges(writes);

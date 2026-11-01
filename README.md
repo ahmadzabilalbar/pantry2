@@ -106,6 +106,12 @@ The sheet should now have the tabs `settings`, `announcement`, `showcase`,
 `items`, `contributions`, `contributions_backup`, `events`, `expenses` and
 `staff`, each with a header row.
 
+`sheet:init` is safe to re-run. On a sheet that already exists it only adds
+the header of any column the code has gained since (e.g. `verified` on
+`contributions` and `contributions_backup`, the "checked against the bank"
+tick in the giver report). Run it **before** deploying such a change: the
+app refuses to read a tab that is missing a column.
+
 ### 4. GitHub
 
 The repository can be <https://github.com/ahmadzabilalbar/pantry2>. **Make it

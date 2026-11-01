@@ -116,6 +116,18 @@ const POST_ROUTES = {
     return { success: true, message: "Rekod sumbangan berjaya dikemas kini!", data: await freshPayload() };
   },
 
+  async verify_contribution(body) {
+    const id = parseInt(body.contribution_id ?? body.id, 10) || 0;
+    if (id <= 0) fail(400, "ID sumbangan tidak sah");
+    const verified = body.verified === true;
+    if (!await store.setContributionVerified(id, verified)) fail(404, "Rekod sumbangan tidak dijumpai");
+    return {
+      success: true,
+      message: verified ? "Ditanda sudah disemak dengan bank" : "Tanda semakan bank dibuang",
+      data: await freshPayload()
+    };
+  },
+
   async delete_contribution(body) {
     const id = parseInt(body.contribution_id ?? body.id, 10) || 0;
     if (id <= 0) fail(400, "ID sumbangan tidak sah");

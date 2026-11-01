@@ -43,7 +43,9 @@ tracker. Setup is in `README.md`.
    `TABLES` in `lib/store.js`, and `tools/init-sheet.mjs` creates it.
    - Columns are mapped **by header name**. To add a column, add it to
      `TABLES` and add its header to the live sheet: run `npm run sheet:init`
-     for new tabs, or type the header by hand.
+     for new tabs or new columns (it appends missing headers), or type the
+     header by hand. Do this before deploying, since `parseTable()` refuses a
+     tab with a missing column.
    - Values are written as typed cells / `RAW`, never `USER_ENTERED`, so user
      text can never become a formula. Keep it that way.
    - Ids are `newId()` integers: time-based, below 2^53. There is no
@@ -115,7 +117,7 @@ These carry over fixes from the MySQL version. Do not undo them.
   upserted by id and `created_at` is carried over.
 - **`contributions` and `expenses` are row-level**: append, update or delete
   one row (`addContribution`, `updateContribution`, `deleteContribution`,
-  `addExpense`, `updateExpense`, `deleteExpense`). `SERVER_DERIVED_KEYS` in `app.js` strips
+  `setContributionVerified`, `addExpense`, `updateExpense`, `deleteExpense`). `SERVER_DERIVED_KEYS` in `app.js` strips
   both from the bulk payload; keep them there.
 - **A contribution and its backup row are written in one call** (`batchUpdate`
   for add/delete, one `values:batchUpdate` for an edit), so the two tabs

@@ -159,11 +159,20 @@ r = await post("edit_contribution", { contribution_id: 999, name: "x", amount: 5
 assert.equal(r.status, 404);
 r = await post("edit_contribution", { contribution_id: cid, name: "", amount: 5 }, csrf);
 assert.equal(r.status, 400);
+r = await post("verify_contribution", { contribution_id: cid, verified: true }, csrf);
+assert.equal(r.status, 200);
+assert.equal(r.json.data.contributions.find(c => c.id === cid).verified, true);
+const verifiedCol = sheets.contributions_backup.rows[0].indexOf("verified");
+assert.ok(sheets.contributions_backup.rows.some(row => row[verifiedCol] === 1), "backup row ticked too");
+r = await post("verify_contribution", { contribution_id: cid, verified: false }, csrf);
+assert.equal(r.json.data.contributions.find(c => c.id === cid).verified, false);
+r = await post("verify_contribution", { contribution_id: 999, verified: true }, csrf);
+assert.equal(r.status, 404);
 r = await post("delete_contribution", { contribution_id: cid }, csrf);
 assert.equal(r.status, 200);
 assert.equal(r.json.data.contributions.length, 1);
 assert.equal(sheets.contributions_backup.rows.length, 2, "matching backup removed");
-console.log("✓ contributions add/edit/delete keep backup in step");
+console.log("✓ contributions add/edit/verify/delete keep backup in step");
 
 // expenses
 r = await post("add_expense", { title: "Sabun", amount: 12.3, date: "2026-10-02", staff_name: "SITI BINTI ABU" }, csrf);
